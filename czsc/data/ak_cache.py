@@ -13,7 +13,6 @@ import shutil
 import pandas as pd
 from deprecated import deprecated
 from czsc.data.ts import *
-from czsc.data.ak import *
 from czsc import envs
 from czsc.utils import io
 
@@ -29,8 +28,6 @@ def update_bars_return(kline: pd.DataFrame, bar_numbers=None):
     for col in ['open', 'close', 'high', 'low']:
         kline[col] = kline[col].round(4)
 
-    # debug AssertionError: kline 必须是时间升序
-    # print(kline['dt'][0],kline['dt'][0])
     assert kline['dt'][0] < kline['dt'][1], "kline 必须是时间升序"
     if not bar_numbers:
         bar_numbers = (1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377)
@@ -46,9 +43,9 @@ def update_bars_return(kline: pd.DataFrame, bar_numbers=None):
         kline[b_col] = kline[b_col].round(4)
 
 
-class TsDataCache:
+class AkDataCache:
     """Tushare 数据缓存"""
-    def __init__(self, data_path, refresh=False, sdt="20120101", edt=datetime.now(), site='ts'):
+    def __init__(self, data_path, refresh=False, sdt="20120101", edt=datetime.now()):
         """
 
         :param data_path: 数据路径
@@ -62,7 +59,6 @@ class TsDataCache:
         self.sdt = pd.to_datetime(sdt).strftime(self.date_fmt)
         self.edt = pd.to_datetime(edt).strftime(self.date_fmt)
         self.data_path = data_path
-        self.site = site
         self.prefix = "TS_CACHE"
         self.cache_path = os.path.join(self.data_path, self.prefix)
         os.makedirs(self.cache_path, exist_ok=True)
@@ -171,7 +167,6 @@ class TsDataCache:
                 print(f"ths_index: read cache {file_cache}")
         else:
             df = pro.ths_member(ts_code=ts_code, fields="ts_code,code,name,weight,in_date,out_date,is_new")
-            df = df.reset_index(drop=True, inplace=False)
             df.to_feather(file_cache)
         return df
 
@@ -198,26 +193,11 @@ class TsDataCache:
                 print(f"pro_bar: read cache {file_cache}")
         else:
             start_date_ = (pd.to_datetime(self.sdt) - timedelta(days=1000)).strftime('%Y%m%d')
-            try:
-                if self.site == 'ts':
-                    kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
-                                   start_date=start_date_, end_date=self.edt)
-                elif self.site == 'ak':
-                    kline = ak_pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
-                                       start_date=start_date_, end_date=self.edt)
-            except Exception as e:
-                print(e.args)
-
-
+            kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
+                               start_date=start_date_, end_date=self.edt)
             kline = kline.sort_values('trade_date', ignore_index=True)
-
-            # debug问题 kline['dt'] NaT的原因是 'trade_date' NaT导致的
             kline['trade_date'] = pd.to_datetime(kline['trade_date'], format=self.date_fmt)
             kline['dt'] = kline['trade_date']
-
-            # debug问题 kline['dt']不存在
-            # print(kline.head(2))
-
             kline['avg_price'] = kline['amount'] / kline['vol']
             update_bars_return(kline)
             kline.to_feather(file_cache)
@@ -261,12 +241,8 @@ class TsDataCache:
             delta = timedelta(days=20*int(freq.replace("min", "")))
             dt2 = dt1 + delta
             while dt1 < end_dt:
-                if self.site == 'ts':
-                    df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq,
+                df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq,
                                 start_date=dt1.strftime(dt_fmt), end_date=dt2.strftime(dt_fmt))
-                elif self.site == 'ak':
-                    kline = ak_pro_bar(ts_code=ts_code, asset=asset, freq=freq,
-                                       start_date=dt1.strftime(dt_fmt), end_date=dt2.strftime(dt_fmt))
                 klines.append(df)
                 dt1 = dt2
                 dt2 = dt1 + delta
@@ -342,7 +318,6 @@ class TsDataCache:
 
     def stock_basic(self):
         """获取基础信息数据，包括股票代码、名称、上市日期、退市日期等
-        # 注册tushare社区后，修改个人信息，获得120积分即可访问。不用自己实现
 
         https://tushare.pro/document/2?doc_id=25
 
@@ -454,11 +429,7 @@ class TsDataCache:
             df = io.read_pkl(file_cache)
         else:
             start_date_ = (pd.to_datetime(self.sdt) - timedelta(days=1000)).strftime('%Y%m%d')
-            if self.site == 'ts':
-                df = pro.daily_basic(ts_code=ts_code, start_date=start_date_, end_date="20300101")
-            elif self.site == 'ak':
-                df = pro.daily_basic(ts_code=ts_code, start_date=start_date_, end_date="20300101")
-                # df = ak_daily_basic(ts_code=ts_code, start_date=start_date_, end_date="20300101")
+            df = pro.daily_basic(ts_code=ts_code, start_date=start_date_, end_date="20300101")
             df['trade_date'] = pd.to_datetime(df['trade_date'])
             io.save_pkl(df, file_cache)
 
