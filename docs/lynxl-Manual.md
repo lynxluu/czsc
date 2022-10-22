@@ -280,8 +280,17 @@ C:\Users\admin\gm_token.txt 文件不存在，请单独启动一个 python 终�
 新建gm_token.txt文件 把token放进去
 
 #### 问题2
+File "D:\usr\git-lynx\czsc\czsc\signals\pos.py", line 95, in get_s_long05
+    dt_ = cat.end_dt.strftime(dt_fmt)
 UnicodeEncodeError: 'locale' codec can't encode character '\u5e74' in position 2: encoding error
 
+解决方法
+在当前文件中加入
+import locale
+locale.setlocale(locale.LC_CTYPE, 'Chinese')
+```
+
+```ini
 #### 问题3
 No objects to concatenate
 File "E:\usr\git\czsc\czsc\data\ts_cache.py", line 276, in pro_bar_minutes

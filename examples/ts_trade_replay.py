@@ -11,11 +11,15 @@ from czsc.strategies import trader_strategy_a as strategy
 from czsc.utils import BarGenerator
 from czsc.traders.utils import trade_replay
 
+# 解决 strftime(dt_fmt) 编码报错
+import locale
+locale.setlocale(locale.LC_CTYPE, 'Chinese')
+
 tactic = strategy("000001.SH")
 base_freq = tactic['base_freq']
 bars = dc.pro_bar_minutes('000001.SZ', "20150101", "20220101", freq=freq_cn2ts[base_freq],
                           asset="I", adj="hfq", raw_bar=True)
-res_path = r"C:\ts_data_czsc\trade_replay_test4"
+res_path = r"D:\ts_data\trade_replay_test4"
 
 
 if __name__ == '__main__':

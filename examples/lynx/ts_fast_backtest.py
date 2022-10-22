@@ -7,10 +7,12 @@ create_dt: 2021/12/12 22:00
 import os
 import pandas as pd
 from czsc.traders.ts_backtest import TsDataCache, TsStocksBacktest, freq_cn2ts
-from czsc.strategies import trader_example1 as strategy
+# from czsc.strategies import trader_example1 as strategy
+from czsc.strategies import trader_strategy_a as strategy
 # from examples import tactics
-from czsc.data import config
+import locale
 
+locale.setlocale(locale.LC_CTYPE, 'Chinese')    # 设置语言环境,避免解码问题
 os.environ['czsc_verbose'] = "0"        # 是否输出详细执行信息，包括一些用于debug的信息，0 不输出，1 输出
 os.environ['czsc_min_bi_len'] = "6"     # 通过环境变量设定最小笔长度，6 对应新笔定义，7 对应老笔定义
 
@@ -18,12 +20,11 @@ pd.set_option('mode.chained_assignment', None)
 pd.set_option('display.max_rows', 1000)
 pd.set_option('display.max_columns', 20)
 
-paras = config.yaml_config()['dev']
-# data_path = r"C:\ts_data_czsc"
-dc = TsDataCache(paras['data_path'], sdt=paras['sdt'], edt=paras['edt'])
+data_path = r"D:\ts_data_czsc"
+dc = TsDataCache(data_path, sdt='2000-01-01', edt='2022-02-18')
 freq = freq_cn2ts[strategy('000001.SH')['base_freq']]
-sdt = paras['sdt']
-edt = paras['edt']
+sdt = '20140101'
+edt = "20211216"
 init_n = 1000*4
 
 
@@ -59,8 +60,8 @@ def run_more_backtest(step, ts_codes):
 
 if __name__ == '__main__':
     # run_more_backtest(step='check', ts_codes=['000002.SZ'])
-    # run_backtest(step_seq=('index',))
-    run_backtest(step_seq=('etfs',))
+    run_backtest(step_seq=('index',))
+    # run_backtest(step_seq=('etfs',))
     # run_backtest(step_seq=('index', 'train'))
     # run_backtest(step_seq=('check', 'index', 'train'))
     # run_backtest(step_seq=('check', 'index', 'train', 'valid'))

@@ -153,5 +153,71 @@ def trader_strategy_a(symbol):
 
     return tactic
 
+def trader_stocks_base_t1(symbol):
+    """60分钟MACD金叉死叉"""
+    def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
+        s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+        if cat.freq == Freq.F60:
+            s.update(signals.ta.get_s_macd(cat, di=1))
+            s.update(signals.ta.get_s_zdt(cat, di=1))
+        return s
 
+    long_states_pos = {
+        'hold_long_a': 1.0,
+        'hold_long_b': 1.0,
+        'hold_long_c': 1.0,
+    }
+    short_states_pos = {
+        'hold_short_a': 1.0,
+        'hold_short_b': 1.0,
+        'hold_short_c': 1.0,
+    }
+
+    long_events = [
+        Event(name="开多", operate=Operate.LO, factors=[
+            Factor(name="持多", signals_all=[
+                Signal("60分钟_倒1K_MACD多空_多头_任意_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+
+        Event(name="平多", operate=Operate.LE, factors=[
+            Factor(name="持币", signals_all=[
+                Signal("60分钟_倒1K_MACD多空_空头_任意_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+    ]
+
+    short_events = [
+        Event(name="开空", operate=Operate.SO, factors=[
+            Factor(name="持空", signals_all=[
+                Signal("60分钟_倒1K_MACD多空_空头_任意_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+
+        Event(name="平空", operate=Operate.SE, factors=[
+            Factor(name="持币", signals_all=[
+                Signal("60分钟_倒1K_MACD多空_多头_任意_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+    ]
+
+    tactic = {
+        "base_freq": '60分钟',
+        "freqs": ['日线'],
+        "get_signals": get_signals,
+
+        "long_states_pos": long_states_pos,
+        "long_events": long_events,
+        "long_min_interval": 3600 * 12,
+
+        "short_states_pos": short_states_pos,
+        "short_events": short_events,
+        "short_min_interval": 3600 * 12,
+    }
+
+    return tactic
 

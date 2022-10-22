@@ -17,7 +17,7 @@ from czsc.sensors.utils import check_signals_acc
 
 os.environ['czsc_verbose'] = '1'
 
-data_path = r'C:\ts_data'
+data_path = r'D:\ts_data_czsc'
 dc = TsDataCache(data_path, sdt='2010-01-01', edt='20211209')
 
 symbol = '000001.SZ'
