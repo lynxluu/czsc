@@ -14,9 +14,9 @@ locale.setlocale(locale.LC_CTYPE, 'Chinese')
 dc = TsDataCache(data_path=r"D:\ts_data\share", refresh=False, sdt="20120101", edt="20221001")
 
 # 获取单个品种的基础周期K线
-tactic = strategy("600438.SZ")
+tactic = strategy("600438.SH")
 base_freq = tactic['base_freq']
-bars = dc.pro_bar_minutes('000001.SZ', "20150101", "20221001", freq=freq_cn2ts[base_freq], asset="E", adj="hfq")
+bars = dc.pro_bar_minutes('600438.SH', "20150101", "20221001", freq=freq_cn2ts[base_freq], asset="E", adj="hfq")
 
 # 设置回放快照文件保存目录
 res_path = r"D:\ts_data\replay_trader_stocks_base_t1"

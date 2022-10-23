@@ -9,14 +9,22 @@ ta-lib 安装包：https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
 """
 import numpy as np
 from collections import OrderedDict
-
-from .. import analyze
-from ..objects import Signal
-from ..enum import Freq
+from czsc.traders import CzscAdvancedTrader
+from czsc import analyze
+from czsc.objects import Signal
+from czsc.enum import Freq
 try:
-    from ..utils.ta1 import MACD, SMA
+    from czsc.utils.ta1 import MACD, SMA
 except:
-    from ..utils.ta import MACD, SMA
+    from czsc.utils.ta import MACD, SMA
+
+# from .. import analyze
+# from ..objects import Signal
+# from ..enum import Freq
+# try:
+#     from ..utils.ta1 import MACD, SMA
+# except:
+#     from ..utils.ta import MACD, SMA
 
 
 def get_s_single_k(c: analyze.CZSC, di: int = 1) -> OrderedDict:
@@ -87,6 +95,7 @@ def get_s_three_k(c: analyze.CZSC, di: int = 1) -> OrderedDict:
 
 
 def get_s_macd(c: analyze.CZSC, di: int = 1) -> OrderedDict:
+# def get_s_macd(c: CzscAdvancedTrader, di: int = 1) -> OrderedDict:
     """获取倒数第i根K线的MACD相关信号"""
     freq: Freq = c.freq
     s = OrderedDict()
