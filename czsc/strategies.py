@@ -223,9 +223,11 @@ def trader_strategy_double_ma(symbol):
     """A股市场择时策略A"""
     def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+        signals.example.update_ma_cache(cat, "60分钟", (5, 10))
         for _, c in cat.kas.items():
             if c.freq in [Freq.F60]:
-                s.update(signals.example.update_ma_cache(cat, "60分钟", (5, 10)))  # 计算均线缓存
+                # s.update(signals.example.update_ma_cache(cat, "60分钟", (5, 10)))  # 计算ma均线缓存
+                # s.update(signals.example.update_ma_cache(cat, "60分钟", (5, 10)))  # 计算sma均线缓存
                 s.update(signals.utils.check_cross_info(cat.cache[f"{c.freq}均线"][f"MA{5}"],cat.cache[f"{c.freq}均线"][f"MA{10}"]))
                 # s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
                 # s.update(signals.utils.check_cross_info())
