@@ -168,5 +168,30 @@ def macd_base(cat: CzscAdvancedTrader, freq: str):
     return s
 
 
+def double_ma(cat: CzscAdvancedTrader, di: int = 1, t1: int = 5, t2: int = 10) -> OrderedDict:
+    """双均线相关信号
+
+    完全分类：
+    """
+    assert t2 > t1, "t2必须是长线均线，t1为短线均线"
+    cache_key = f"{freq}均线"
+    sma_cache = cat.cache[cache_key]
+    assert sma_cache and sma_cache['update_dt'] == cat.end_dt
+
+    s = OrderedDict()
+    k1 = str(cat.freq.value)
+    k2 = f"倒{di}K"
+    close = sma_cache['close']
+    for t in t_seq:
+        sma = sma_cache[f"SMA{t}"]
+        if len(sma) == 0:
+            v1, v2 = '其他', '其他'
+        else:
+            v1 = "多头" if close[-1] >= sma[-1] else "空头"
+            v2 = "向上" if sma[-1] >= sma[-2] else "向下"
+
+        x1 = Signal(k1=k1, k2=k2, k3=f"SMA{t}", v1=v1, v2=v2)
+        s[x1.key] = x1.value
+    return s
 
 

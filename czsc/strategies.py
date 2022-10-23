@@ -12,7 +12,7 @@ from czsc.objects import Freq, Operate, Signal, Factor, Event
 from collections import OrderedDict
 from czsc.traders import CzscAdvancedTrader
 from czsc.objects import PositionLong, PositionShort, RawBar
-from czsc import analyze
+# from czsc import analyze
 
 def trader_standard(symbol, T0=False, min_interval=3600*4):
     """择时策略编写的一些标准说明
@@ -219,22 +219,16 @@ def trader_stocks_base_t1(symbol):
 
     return tactic
 
-def trader_strategy_ma5_ma10(symbol):
+def trader_strategy_double_ma(symbol):
     """A股市场择时策略A"""
     def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
-        s.update(signals.pos.get_s_long01(cat, th=100))
-        s.update(signals.pos.get_s_long02(cat, th=100))
-        s.update(signals.pos.get_s_long05(cat, span='月', th=500))
         for _, c in cat.kas.items():
-            if c.freq in [Freq.F15]:
-                s.update(signals.bxt.get_s_d0_bi(c))
+            if c.freq in [Freq.F60]:
+                # s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
+                s.update(signals.utils.check_cross_info())
                 s.update(signals.other.get_s_zdt(c, di=1))
-                s.update(signals.other.get_s_op_time_span(c, op='开多', time_span=('13:00', '14:50')))
-                s.update(signals.other.get_s_op_time_span(c, op='平多', time_span=('09:35', '14:50')))
 
-            if c.freq in [Freq.F60, Freq.D, Freq.W]:
-                s.update(signals.ta.get_s_macd(c, di=1))
         return s
 
     # 定义多头持仓对象和交易事件
@@ -243,11 +237,8 @@ def trader_strategy_ma5_ma10(symbol):
     long_events = [
         Event(name="开多", operate=Operate.LO, factors=[
             Factor(name="低吸", signals_all=[
-                Signal("开多时间范围_13:00_14:50_是_任意_任意_0"),
-                Signal("15分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
-                Signal("60分钟_倒1K_MACD多空_多头_任意_任意_0"),
-                Signal("15分钟_倒0笔_方向_向上_任意_任意_0"),
-                Signal("15分钟_倒0笔_长度_5根K线以下_任意_任意_0"),
+                Signal("60分钟_倒1K_方向_向上_任意_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
             ]),
         ]),
 
