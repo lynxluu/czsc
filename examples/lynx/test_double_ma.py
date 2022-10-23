@@ -40,4 +40,4 @@ for bar in bars1:
 
 if __name__ == '__main__':
     # trade_replay(bg, bars2, strategy, res_path)
-    signals.
+    signals.utils.check_cross_info()

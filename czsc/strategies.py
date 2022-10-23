@@ -225,8 +225,8 @@ def trader_strategy_double_ma(symbol):
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
         for _, c in cat.kas.items():
             if c.freq in [Freq.F60]:
-                # s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
-                s.update(signals.utils.check_cross_info())
+                s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
+                # s.update(signals.utils.check_cross_info())
                 s.update(signals.other.get_s_zdt(c, di=1))
 
         return s
