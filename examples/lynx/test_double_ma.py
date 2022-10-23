@@ -26,7 +26,7 @@ base_freq = tactic['base_freq']
 bars = dc.pro_bar_minutes('600438.SH', "20150101", "20221001", freq=freq_cn2ts[base_freq], asset="E", adj="hfq")
 
 # 设置回放快照文件保存目录
-res_path = r"D:\ts_data\replay_trader_stocks_base_t1"
+res_path = r"D:\ts_data\replay_trader_double_ma"
 
 
 # 拆分基础周期K线，一部分用来初始化BarGenerator，随后的K线是回放区间
@@ -39,5 +39,5 @@ for bar in bars1:
 
 
 if __name__ == '__main__':
-    # trade_replay(bg, bars2, strategy, res_path)
-    signals.utils.check_cross_info()
+    trade_replay(bg, bars2, strategy, res_path)
+    # signals.utils.check_cross_info()

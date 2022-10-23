@@ -225,7 +225,9 @@ def trader_strategy_double_ma(symbol):
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
         for _, c in cat.kas.items():
             if c.freq in [Freq.F60]:
-                s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
+                s.update(signals.example.update_ma_cache(cat, "60分钟", (5, 10)))  # 计算均线缓存
+                s.update(signals.utils.check_cross_info(cat.cache[f"{c.freq}均线"][f"MA{5}"],cat.cache[f"{c.freq}均线"][f"MA{10}"]))
+                # s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
                 # s.update(signals.utils.check_cross_info())
                 s.update(signals.other.get_s_zdt(c, di=1))
 

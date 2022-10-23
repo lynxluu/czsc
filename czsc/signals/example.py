@@ -37,6 +37,24 @@ def update_sma_cache(cat: CzscAdvancedTrader, freq: str,
         sma_cache[f"SMA{t}"] = ta.SMA(close, timeperiod=t)
     cat.cache[cache_key] = sma_cache
 
+def update_ma_cache(cat: CzscAdvancedTrader, freq: str,
+                     ma_params: Tuple = (5, 13, 21, 34, 55, 89, 144, 233)):
+    """更新某个级别的均线缓存
+
+    :param cat: 交易对象
+    :param freq: 指定周期
+    :param ma_params: 均线参数
+    :return:
+    """
+    assert freq in cat.freqs, f"{freq} 不在 {cat.freqs} 中"
+    cache_key = f"{freq}均线"
+    ma_cache = cat.cache.get(cache_key, {})
+    ma_cache['update_dt'] = cat.end_dt
+    close = np.array([x.close for x in cat.kas[freq].bars_raw])
+    ma_cache['close'] = close
+    for t in ma_params:
+        ma_cache[f"MA{t}"] = ta.MA(close, timeperiod=t)
+    cat.cache[cache_key] = ma_cache
 
 def update_macd_cache(cat: CzscAdvancedTrader, freq: str):
     """更新某个级别的均线缓存
