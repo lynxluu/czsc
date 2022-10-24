@@ -223,14 +223,10 @@ def trader_strategy_double_ma(symbol):
     """A股市场择时策略A"""
     def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
-        signals.example.update_ma_cache(cat, "60分钟", (5, 10))
+
         for _, c in cat.kas.items():
             if c.freq in [Freq.F60]:
-                # s.update(signals.example.update_ma_cache(cat, "60分钟", (5, 10)))  # 计算ma均线缓存
-                # s.update(signals.example.update_ma_cache(cat, "60分钟", (5, 10)))  # 计算sma均线缓存
-                s.update(signals.utils.check_cross_info(cat.cache[f"{c.freq}均线"][f"MA{5}"],cat.cache[f"{c.freq}均线"][f"MA{10}"]))
-                # s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
-                # s.update(signals.utils.check_cross_info())
+                s.update(signals.example.double_ma(c, freq="60分钟", di=1, t1=5,t2=10))
                 s.update(signals.other.get_s_zdt(c, di=1))
 
         return s
@@ -241,29 +237,27 @@ def trader_strategy_double_ma(symbol):
     long_events = [
         Event(name="开多", operate=Operate.LO, factors=[
             Factor(name="低吸", signals_all=[
-                Signal("60分钟_倒1K_方向_向上_任意_任意_0"),
+                Signal("60分钟_倒1K_5*10双均线_金叉_多头_任意_0"),
                 Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
             ]),
         ]),
 
         Event(name="平多", operate=Operate.LE, factors=[
             Factor(name="持有资金", signals_all=[
-                Signal("平多时间范围_09:35_14:50_是_任意_任意_0"),
-                Signal("15分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
-            ], signals_not=[
-                Signal("15分钟_倒0笔_方向_向上_任意_任意_0"),
-                Signal("60分钟_倒1K_MACD多空_多头_任意_任意_0"),
+                Signal("60分钟_倒1K_5*10双均线_死叉_空头_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
             ]),
         ]),
     ]
 
     tactic = {
-        "base_freq": '15分钟',
+        "base_freq": '60分钟',
         "freqs": ['60分钟', '日线'],
         "get_signals": get_signals,
 
         "long_pos": long_pos,
         "long_events": long_events,
+        "long_min_interval": 3600 * 12,
 
         # 空头策略不进行定义，也就是不做空头交易
         "short_pos": None,

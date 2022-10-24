@@ -16,6 +16,8 @@ from typing import List, Union, Tuple, Dict
 from czsc.objects import Freq, Signal, RawBar, NewBar
 from czsc.traders.advanced import CzscAdvancedTrader
 from czsc.signals.utils import check_cross_info
+from czsc import signals
+
 
 
 def update_sma_cache(cat: CzscAdvancedTrader, freq: str,
@@ -186,30 +188,38 @@ def macd_base(cat: CzscAdvancedTrader, freq: str):
     return s
 
 
-def double_ma(cat: CzscAdvancedTrader, di: int = 1, t1: int = 5, t2: int = 10) -> OrderedDict:
+def double_ma(cat: CzscAdvancedTrader, freq: str, di: int, t1: int = 5, t2: int = 10) -> OrderedDict:
     """双均线相关信号
 
-    完全分类：
+    有效信号列表：
+    60分钟_倒1K_5*10双均线_金叉_多头_任意_0
+    60分钟_倒1K_5*10双均线_死叉_空头_任意_0
     """
     assert t2 > t1, "t2必须是长线均线，t1为短线均线"
-    cache_key = f"{freq}均线"
-    sma_cache = cat.cache[cache_key]
-    assert sma_cache and sma_cache['update_dt'] == cat.end_dt
 
     s = OrderedDict()
-    k1 = str(cat.freq.value)
+    k1 = freq
     k2 = f"倒{di}K"
-    close = sma_cache['close']
-    for t in t_seq:
-        sma = sma_cache[f"SMA{t}"]
-        if len(sma) == 0:
-            v1, v2 = '其他', '其他'
-        else:
-            v1 = "多头" if close[-1] >= sma[-1] else "空头"
-            v2 = "向上" if sma[-1] >= sma[-2] else "向下"
+    k3 = f"双均线{t1}*{t2}"
 
-        x1 = Signal(k1=k1, k2=k2, k3=f"SMA{t}", v1=v1, v2=v2)
-        s[x1.key] = x1.value
+    # 计算均线缓存
+    update_ma_cache(cat, freq, (t1, t2))
+    cache_key = f"{k1}均线"
+    ma_cache = cat.cache[cache_key]
+    assert ma_cache and ma_cache['update_dt'] == cat.end_dt
+
+    close = ma_cache['close']
+    diff = ma_cache[t1] - ma_cache[t2]
+    if len(ma_cache) == 0:
+        v1, v2 = '任意', '任意'
+    else:
+        if (diff[-1] > 0 and diff[-2] <= 0):
+            v1,v2 = "金叉","多头"
+        elif (diff[-1] < 0 and diff[-2] >= 0):
+            v1,v2 = "死叉","空头"
+
+    x1 = Signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2, v3='任意')
+    s[x1.key] = x1.value
     return s
 
 
