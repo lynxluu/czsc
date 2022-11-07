@@ -188,15 +188,15 @@ def macd_base(cat: CzscAdvancedTrader, freq: str):
     return s
 
 
-def double_ma(cat: CzscAdvancedTrader, di: int, tma: tuple) -> OrderedDict:
+def double_ma(cat: CzscAdvancedTrader, di: int, tma: tuple(int,int)) -> OrderedDict:
     """双均线相关信号
 
     有效信号列表：
     60分钟_倒1K_5*10双均线_金叉_多头_任意_0
     60分钟_倒1K_5*10双均线_死叉_空头_任意_0
     """
-    assert len(tma) == 2, "传入参数必须是两个数字" \
-                          ""
+    assert len(tma) == 2, "传入参数必须是两个数字"
+    t1, t2 = tma[0], tma[1]
     assert t2 > t1, "t2必须是长线均线，t1为短线均线"
 
     s = OrderedDict()
