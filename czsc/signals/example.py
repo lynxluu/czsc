@@ -65,7 +65,7 @@ def update_macd_cache(cat: CzscAdvancedTrader, freq: str):
     :param freq: 指定周期
     :return:
     """
-    assert freq in cat.freqs, f"{freq} 不在 {cat.freqs} 中"
+    assert freq in cat.freq, f"{freq} 不在 {cat.freq} 中"
     cache_key = f"{freq}MACD"
     cache = cat.cache.get(cache_key, {})
     cache['update_dt'] = cat.end_dt
@@ -188,22 +188,24 @@ def macd_base(cat: CzscAdvancedTrader, freq: str):
     return s
 
 
-def double_ma(cat: CzscAdvancedTrader, freq: str, di: int, t1: int = 5, t2: int = 10) -> OrderedDict:
+def double_ma(cat: CzscAdvancedTrader, di: int, tma: tuple) -> OrderedDict:
     """双均线相关信号
 
     有效信号列表：
     60分钟_倒1K_5*10双均线_金叉_多头_任意_0
     60分钟_倒1K_5*10双均线_死叉_空头_任意_0
     """
+    assert len(tma) == 2, "传入参数必须是两个数字" \
+                          ""
     assert t2 > t1, "t2必须是长线均线，t1为短线均线"
 
     s = OrderedDict()
-    k1 = freq
+    k1 = str(cat.freq.value)
     k2 = f"倒{di}K"
     k3 = f"双均线{t1}*{t2}"
 
     # 计算均线缓存
-    update_ma_cache(cat, freq, (t1, t2))
+    update_ma_cache(cat, k1, (t1, t2))
     cache_key = f"{k1}均线"
     ma_cache = cat.cache[cache_key]
     assert ma_cache and ma_cache['update_dt'] == cat.end_dt

@@ -10,7 +10,7 @@ from czsc.data import TsDataCache, freq_cn2ts
 from czsc.utils import BarGenerator
 from czsc.traders.utils import trade_replay
 # 选择策略
-from czsc.strategies import trader_strategy_double_ma as strategy
+from czsc.strategies import trader_third_buy as strategy
 
 # 解决 strftime(dt_fmt) 编码报错
 import locale
@@ -21,12 +21,12 @@ locale.setlocale(locale.LC_CTYPE, 'Chinese')
 dc = TsDataCache(data_path=r"D:\ts_data\share", refresh=False, sdt="20120101", edt="20221001")
 
 # 获取单个品种的基础周期K线
-tactic = strategy("600438.SH")
+tactic = strategy("000001.SH")
 base_freq = tactic['base_freq']
 bars = dc.pro_bar_minutes('600438.SH', "20150101", "20221001", freq=freq_cn2ts[base_freq], asset="E", adj="hfq")
 
 # 设置回放快照文件保存目录
-res_path = r"D:\ts_data\replay_trader_double_ma"
+res_path = r"D:\ts_data\trader_third_buy"
 
 
 # 拆分基础周期K线，一部分用来初始化BarGenerator，随后的K线是回放区间
