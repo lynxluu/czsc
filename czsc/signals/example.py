@@ -188,7 +188,7 @@ def macd_base(cat: CzscAdvancedTrader, freq: str):
     return s
 
 
-def double_ma(cat: CzscAdvancedTrader, di: int, tma: tuple(int,int)) -> OrderedDict:
+def double_ma(cat: CzscAdvancedTrader, di: int, tma: List[int]) -> OrderedDict:
     """双均线相关信号
 
     有效信号列表：

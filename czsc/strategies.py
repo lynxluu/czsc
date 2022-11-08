@@ -346,7 +346,7 @@ def trader_strategy_bsb(symbol):
 
         for _, c in cat.kas.items():
             if c.freq in [Freq.F15]:
-                s.update(signals.jcc.jcc_bai_san_bing_V221030(c, di=3, th=0.5))
+                s.update(signals.jcc.jcc_three_soldiers(c, di=1, th=0.5))
                 s.update(signals.other.get_s_zdt(c, di=1))
 
         return s
