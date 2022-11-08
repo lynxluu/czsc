@@ -33,5 +33,5 @@ def prepare_data():
             logger.exception(f"fail on: {concept}")
 
 
-# if __name__=='__main__':
-#     prepare_data()
+if __name__=='__main__':
+    prepare_data()
