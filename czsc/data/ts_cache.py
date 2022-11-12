@@ -14,6 +14,7 @@ from czsc.data.ts import *
 from datetime import timedelta
 from czsc import envs
 from czsc.utils import io
+from tqdm import tqdm
 
 
 def update_bars_return(kline: pd.DataFrame, bar_numbers=None):
@@ -26,6 +27,10 @@ def update_bars_return(kline: pd.DataFrame, bar_numbers=None):
     # 统一处理数据精度
     for col in ['open', 'close', 'high', 'low']:
         kline[col] = kline[col].round(4)
+
+    # 判断kline行数，避免只有1根k线导致的后续报错
+    if kline.shape[0] < 2:
+        return None
 
     assert kline['dt'][0] < kline['dt'][1], "kline 必须是时间升序"
     if not bar_numbers:

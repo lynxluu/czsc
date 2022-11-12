@@ -2,10 +2,15 @@ from czsc.data import TsDataCache
 from loguru import logger
 from tqdm import tqdm
 import pandas as pd
+from tushare.util import upass
+import locale
 
+
+locale.setlocale(locale.LC_CTYPE, 'Chinese')
 # 此函数的目的是把缓存导出到data_path,以便共享给别人使用; 使用时,直接指定该目录即可使用
 def prepare_data():
-    dc = TsDataCache(data_path=r"D:\ts_data\share", refresh=False, sdt="20120101", edt="20221001")
+    # upass.set_token('')
+    dc = TsDataCache(data_path=r"D:\ts_data\share", refresh=False, sdt="20120101", edt="20221015")
 
     # 基础数据缓存
     dc.trade_cal()
@@ -20,6 +25,15 @@ def prepare_data():
             dc.pro_bar_minutes(row['ts_code'], freq='15min', asset="E", adj='hfq')
         except:
             logger.exception(f"fail on: {row}")
+
+        # debug单个
+        # if row['ts_code'] == '001255.SZ':
+        #     try:
+        #         dc.pro_bar(row['ts_code'], freq='D', asset="E", adj='hfq')
+        #         dc.pro_bar_minutes(row['ts_code'], freq='15min', asset="E", adj='hfq')
+        #     except:
+        #         logger.exception(f"fail on: {row}")
+
 
     # 同花顺概念
     dc.get_all_ths_members(type_="I")
