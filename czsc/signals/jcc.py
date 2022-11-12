@@ -136,7 +136,7 @@ def jcc_three_crow(c: CZSC, di=1):
     return s
 
 
-def jcc_three_soldiers(c: CZSC, di=1, th=0.5) -> OrderedDict:
+def jcc_three_soldiers(c: CZSC, di=1, th=1, ri=0.2) -> OrderedDict:
     """白三兵
 
     有效信号列表：
@@ -146,33 +146,43 @@ def jcc_three_soldiers(c: CZSC, di=1, th=0.5) -> OrderedDict:
 
     :param c: CZSC 对象
     :param di: 倒数第di跟K线 取倒数三根k线
-    :param th: 可调阈值，上影线超过实体的倍数，保留两位小数
+    :param th: 可调阈值，倒1K上影线与倒1K实体的比值，保留两位小数
+    :param ri: 可调阈值，倒1K涨幅与倒2K涨幅的比值，保留两位小数
     :return: 白三兵识别结果
     """
 
-    # 上涨阻力th, 相对涨幅ri
-    th = int(th * 100)
-    ri = int(0.1 * 100)
-
     s = OrderedDict()
-    k1, k2, k3 = f"{c.freq.value}_TH{th}_白三兵".split('_')
-    v1, v2 = "其他", "其他"
+    k1, k2, k3 = f"{c.freq.value}_D{di}TH{th}_白三兵".split('_')
 
-    # 判断逻辑: 1) 三根K线均收盘价 > 开盘价；2)三根K线收盘价都越来越高； 3) 三根K线的开盘价都在前一根K线的实体范围之间
-    # 4)最后一个K线的上影线与实体的比值小于0.5(可选) 5) 最后一根K线的实际涨幅与前一根k线实体比值大于0.1(可选)
-    bar1, bar2, bar3 = c.bars_raw[-di], c.bars_raw[-di - 1], c.bars_raw[-di - 2]
-    if bar1.open < bar2.open < bar1.close < bar2.close < bar3.close and bar2.open < bar3.open < bar2.close:
+    # th = 倒1K上涨阻力； ri = 倒1K相对涨幅；
+    th = int(th * 100)
+    ri = int(ri * 100)
+
+    # 先后顺序 bar3 <-- bar2 <-- bar1， 所以计算顺序要调整
+    # 判断逻辑: 1) 三根K线均收盘价 > 开盘价；2)三根K线开盘价越来越高； 3)三根K线收盘价越来越高；
+    # 可选条件： 4） 三根K线的开盘价都在前一根K线的实体范围之间；5）倒1K上影线与倒1K实体的比值th_cal小于th； 6) 倒1K涨幅与倒2K涨幅的比值ri_cal大于ri.
+    bar1 = c.bars_raw[-di]
+    bar2 = c.bars_raw[-di - 1]
+    bar3 = c.bars_raw[-di - 2]
+
+    if bar3.open < bar3.close and bar2.open < bar2.close and bar1.open < bar1.close \
+        and bar3.open < bar2.open < bar1.open and bar3.close < bar2.close < bar1.close:
+    # 如考虑条件4，可简化成下面判断条件
+    # if bar3.open < bar2.open < bar3.close < bar2.close < bar1.close and bar2.open < bar1.open < bar2.close:
         v1 = "满足"
-        # th_cal = bar3上影线与bar3实体的比值; 如果大于50, 定义为受阻
-        # ri_cal = bar3的涨幅与bar2实体的比值; 如果小于10, 定义为停顿
-        th_cal = (bar3.high - bar3.close) / (bar3.close - bar3.open) * 100
-        ri_cal = (bar3.close - bar2.close) / (bar2.close - bar2.open) * 100
-        if th_cal >= th:
-            v2 = "受阻"
-        elif ri_cal <= ri:
+        v2 = "其他"
+        th_cal = (bar1.high - bar1.close) / (bar1.close - bar1.open) * 100
+        ri_cal = (bar1.close - bar2.close) / (bar2.close - bar3.close) * 100
+        if ri_cal > ri:
+            if th_cal < th:
+                v2 = "挺进"
+            else:
+                v2 = "受阻"
+        else:
             v2 = "停顿"
-        elif th_cal < th and ri_cal > ri:
-            v2 = "挺进"
+    else:
+        v1 = "其他"
+        v2 = "其他"
 
     signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2)
     s[signal.key] = signal.value

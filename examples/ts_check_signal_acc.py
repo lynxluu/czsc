@@ -21,15 +21,15 @@ os.environ['czsc_verbose'] = '1'
 data_path = r'D:\ts_data'
 dc = TsDataCache(data_path, sdt='2010-01-01', edt='20221001')
 
-symbol = '000001.SZ'
+symbol = '600328.SH'
 bars = dc.pro_bar_minutes(ts_code=symbol, asset='E', freq='15min',
-                          sdt='20200101', edt='20220930', adj='qfq', raw_bar=True)
+                          sdt='20210101', edt='20220930', adj='qfq', raw_bar=True)
 
 def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
     s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+    s.update(signals.jcc.jcc_three_soldiers(cat.kas["日线"], di=1))
+    # s.update(signals.jcc.jcc_three_crow(cat.kas["15分钟"], di=1))
     # s.update(signals.bxt.get_s_base_xt(cat.kas['日线']))
-    # s.update(signals.jcc.jcc_three_soldiers(cat.kas["60分钟"], di=1, th=0.5))
-    s.update(signals.jcc.jcc_three_crow(cat.kas["15分钟"], di=1))
 
     # 使用缓存来更新信号的方法
     # signals.example.update_macd_cache(cat, '日线')
