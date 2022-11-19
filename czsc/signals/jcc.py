@@ -686,3 +686,51 @@ def jcc_three_soldiers(c: CZSC, di=1, th=1, ri=0.2) -> OrderedDict:
 
     signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2)
     s[signal.key] = signal.value
+
+
+def jcc_fan_ji_xian_v221121(c: CZSC, di=1) -> OrderedDict:
+    """反击线；贡献者：lynx
+
+    **信号逻辑：**
+
+    1. 反击线分两种，看涨反击线和看跌反击线，共同特点是两根K线收盘价接近;
+    2. 看涨反击线，下降趋势，先阴线，后大幅低开收阳线;
+    3. 看跌反击线，上升趋势，先阳线，后大幅高开收阴线;
+
+    **信号列表：**
+
+    * Signal('15分钟_D1T_反击线_满足_看涨_任意_0')
+    * Signal('15分钟_D1T_反击线_满足_看跌_任意_0')
+
+    :param c: CZSC 对象
+    :param di: 倒数第di根K线 取倒数三根k线
+    :return: 反击线识别结果
+    """
+
+    k1, k2, k3 = f"{c.freq.value}_D{di}_反击线".split('_')
+
+    # 取三根K线 判断是否满足基础形态
+    bars: List[RawBar] = get_sub_elements(c.bars_raw, di, n=3)
+    bar1, bar2, bar3 = bars
+
+    # 大幅高/低开 高/低开幅度除以bar2实体大于1； x1 = abs(bar3.open -bar2.close)/abs(bar2.close-bar2.open) >= 1
+    # 收盘价接近 bar2和bar3的收盘价差值 除以bar2实体小于0.1； x2 = abs(bar3.close-bar2.close)/abs(bar2.close-bar2.open) <= 0.1
+    x1 = abs(bar3.open - bar2.close) / abs(bar2.close - bar2.open)
+    x2 = abs(bar3.close - bar2.close) / abs(bar2.close - bar2.open)
+    v1 = "其他"
+    if x1 >= 1 and x2 <= 0.1:
+        v1 = "满足"
+
+    # 看涨：下降趋势 bar1.close > bar2.close； bar2阴线 bar2.open > bar2.close； bar3低开 bar2.close > bar3.open；
+    # 看跌：上升趋势 bar2.close > bar1.close； bar2阳线 bar2.close > bar2.open； bar3高开 bar3.open > bar2.close；
+    v2 = "其他"
+    if v1 == "满足":
+        if bar1.close > bar2.close and bar2.open > bar2.close > bar3.open:
+            v2 = "看涨"
+        elif bar2.close > bar1.close and bar3.open > bar2.close > bar2.open:
+            v2 = "看跌"
+
+    s = OrderedDict()
+    signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2)
+    s[signal.key] = signal.value
+    return s
