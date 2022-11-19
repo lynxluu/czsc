@@ -58,7 +58,7 @@ class TushareProApi:
         self.__timeout = timeout
 
     def query(self, api_name, fields='', **kwargs):
-        if api_name in ['__getstate__']:
+        if api_name in ['__getstate__', '__setstate__']:
             return pd.DataFrame()
 
         req_params = {

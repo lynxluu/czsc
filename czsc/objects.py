@@ -5,6 +5,7 @@ email: zeng_bin8888@163.com
 create_dt: 2021/3/10 12:21
 describe: 常用对象结构
 """
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
@@ -39,6 +40,21 @@ class RawBar:
     vol: [float, int]
     amount: [float, int] = None
     cache: dict = None    # cache 用户缓存，一个最常见的场景是缓存技术指标计算结果
+
+    @property
+    def upper(self):
+        """上影"""
+        return self.high - max(self.open, self.close)
+
+    @property
+    def lower(self):
+        """下影"""
+        return min(self.open, self.close) - self.low
+
+    @property
+    def solid(self):
+        """实体"""
+        return abs(self.open - self.close)
 
 
 @dataclass
@@ -221,6 +237,7 @@ class BI:
 
     @property
     def rsq(self):
+        """笔的斜率"""
         close = [x.close for x in self.raw_bars]
         return round(RSQ(close), 4)
 
@@ -231,6 +248,16 @@ class BI:
         for bar in self.bars[1:-1]:
             x.extend(bar.raw_bars)
         return x
+
+    @property
+    def hypotenuse(self):
+        """笔的斜边长度"""
+        return pow(pow(self.power_price, 2) + pow(len(self.raw_bars), 2), 1/2)
+
+    @property
+    def angle(self):
+        """笔的斜边与竖直方向的夹角，角度越大，力度越大"""
+        return round(math.asin(self.power_price / self.hypotenuse) * 180 / 3.14, 2)
 
 
 @dataclass
