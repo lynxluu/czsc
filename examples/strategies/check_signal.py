@@ -19,47 +19,46 @@ from czsc.traders import CzscAdvancedTrader
 
 # 定义信号函数
 # ----------------------------------------------------------------------------------------------------------------------
-def jcc_zhuo_yao_dai_xian_v221113(c: CZSC, di: int = 1, left: int = 20) -> OrderedDict:
-    """捉腰带线
 
-    **捉腰带线判别标准：**
+def tas_macd_power_V221108(c: CZSC, di: int = 1) -> OrderedDict:
+    """MACD强弱
 
-    捉腰带形态是由单独一根蜡烛线构成的。看涨捉腰带形态是一 根坚挺的白色蜡烛线，其开市价位于时段的最低点
-    （或者，这根蜡烛线只有极短的下影线），然后市场一路上扬，收市价位于或接近本时段的最高
+    **信号逻辑：**
 
-    **有效信号列表：**
+    1. 指标超强满足条件：DIF＞DEA＞0；释义：指标超强表示市场价格处于中长期多头趋势中，可能形成凌厉的逼空行情
+    2. 指标强势满足条件：DIF-DEA＞0（MACD柱线＞0）释义：指标强势表示市场价格处于中短期多头趋势中，价格涨多跌少，通常是反弹行情
+    3. 指标弱势满足条件：DIF-DEA＜0（MACD柱线＜0）释义：指标弱势表示市场价格处于中短期空头趋势中，价格跌多涨少，通常是回调行情
+    4. 指标超弱满足条件：DIF＜DEA＜0释义：指标超弱表示市场价格处于中长期空头趋势中，可能形成杀多行情
 
-    - Signal('60分钟_D1L20_捉腰带线_看跌_光头阴线_任意_0')
-    - Signal('60分钟_D1L20_捉腰带线_看多_光脚阳线_任意_0')
+    **信号列表：**
 
-    :param c: CZSC 对象
-    :param di: 倒数第di跟K线
-    :param left: 从di向左数left根K线
-    :return: 捉腰带线识别结果
+    - Signal('60分钟_D1K_MACD强弱_超强_任意_任意_0')
+    - Signal('60分钟_D1K_MACD强弱_弱势_任意_任意_0')
+    - Signal('60分钟_D1K_MACD强弱_超弱_任意_任意_0')
+    - Signal('60分钟_D1K_MACD强弱_强势_任意_任意_0')
+
+    :param c: CZSC对象
+    :param di: 信号产生在倒数第di根K线
+    :return: 信号识别结果
     """
-    k1, k2, k3 = f"{c.freq.value}_D{di}L{left}_捉腰带线".split('_')
-    v1, v2 = "其他", "其他"
+    k1, k2, k3 = f"{c.freq.value}_D{di}K_MACD强弱".split("_")
 
-    bar: RawBar = c.bars_raw[-di]
-    # x1 - 上影线大小；x2 - 实体大小；x3 - 下影线大小
-    x1, x2, x3 = bar.high - max(bar.open, bar.close), abs(bar.close - bar.open), min(bar.open, bar.close) - bar.low
+    v1 = "其他"
+    if len(c.bars_raw) > di + 10:
+        bar = c.bars_raw[-di]
+        dif, dea = bar.cache['MACD']['dif'], bar.cache['MACD']['dea']
 
-    if len(c.bars_raw) > left + di:
-        left_bars: List[RawBar] = c.bars_raw[-left - di:-di]
-        left_max = max([x.high for x in left_bars])
-        left_min = min([x.low for x in left_bars])
-
-        if bar.low < left_min:
-            if bar.close > bar.open and x3 == 0:
-                v1 = "看多"
-                v2 = "光脚阳线"
-        elif bar.high > left_max:
-            if bar.close < bar.open and x1 == 0:
-                v1 = "看跌"
-                v2 = "光头阴线"
+        if dif >= dea >= 0:
+            v1 = "超强"
+        elif dif - dea > 0:
+            v1 = "强势"
+        elif dif <= dea <= 0:
+            v1 = "超弱"
+        elif dif - dea < 0:
+            v1 = "弱势"
 
     s = OrderedDict()
-    signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2)
+    signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1)
     s[signal.key] = signal.value
     return s
 
@@ -71,7 +70,8 @@ def trader_strategy(symbol):
 
     def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
-        s.update(jcc_zhuo_yao_dai_xian_v221113(cat.kas['60分钟'], di=1))
+        signals.update_macd_cache(cat.kas['60分钟'])
+        s.update(tas_macd_power_V221108(cat.kas['60分钟'], di=1))
         return s
 
     tactic = {
