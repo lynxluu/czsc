@@ -901,30 +901,32 @@ def jcc_fan_ji_xian_v221121(c: CZSC, di=1) -> OrderedDict:
         left_min = min([x.low for x in left_bars])
         gap = left_max - left_min
 
-    # 大幅高/低开 高/低开幅度除以bar2实体大于1； x1 = abs(bar3.open -bar2.close)/abs(bar2.close-bar2.open) >= 1
-    # 收盘价接近 bar2和bar3的收盘价差值 除以bar2实体小于0.1； x2 = abs(bar3.close-bar2.close)/abs(bar2.close-bar2.open) <= 0.1
-    # bar2 实体不能小于gap的0.1倍，x3 = abs(bar2.close - bar2.open) / gap
-    # bar3 上影线小于bar2实体的1倍 x4 = abs(bar3.high - max(bar3.open, bar3.close)) / abs(bar2.close - bar2.open)
-    # bar3 下影线小于bar2实体的1倍 x4a = abs(bar3.low - min(bar3.open, bar3.close)) / abs(bar2.close - bar2.open)
-    x1 = abs(bar3.open - bar2.close) / abs(bar2.close - bar2.open)
-    x2 = abs(bar3.close - bar2.close) / abs(bar2.close - bar2.open)
-    x3 = abs(bar2.close - bar2.open)
-    x4 = abs(bar3.high - max(bar3.open, bar3.close)) / abs(bar2.close - bar2.open)
-    x4a = abs(bar3.low - min(bar3.open, bar3.close)) / abs(bar2.close - bar2.open)
-
     v1 = "其他"
-    if x1 >= 1 and x2 <= 0.1 and x3 >= 0.1:
-        v1 = "满足"
+    # 用来比较的bar2实体不能等于0，避免0做除数
+    if bar2.close != bar2.open:
+        # 大幅高/低开 高/低开幅度除以bar2实体大于1； x1 >= 1
+        # 收盘价接近 bar2和bar3的收盘价差值 除以bar2实体小于0.1； x2 <= 0.1
+        # bar2实体除以前20根K线的区间的比值，此值影响比较大；x3 >= 0.02
+        # bar3上影线除以bar2实体的比值, 看涨时上影线不宜过大； x4 < 1
+        # bar3下影线除以bar2实体的比值，看跌时下影线不宜过大； x4a < 1
+        bar2h = abs(bar2.close - bar2.open)
+        x1 = abs(bar3.open - bar2.close) / bar2h
+        x2 = abs(bar3.close - bar2.close) / bar2h
+        x3 = bar2h / gap
+        x4 = (bar3.high - max(bar3.open, bar3.close)) / bar2h
+        x4a = (min(bar3.open, bar3.close) - bar3.low) / bar2h
+        if x1 >= 1 and x2 <= 0.1 and x3 >= 0.02:
+            v1 = "满足"
 
-    # 看涨：下降趋势； bar2阴线 bar2.open > bar2.close； bar3低开 bar2.close > bar3.open；
-    # 看跌：上升趋势； bar2阳线 bar2.close > bar2.open； bar3高开 bar3.open > bar2.close；
+    # 看涨：下降趋势； bar2阴线； bar3低开；
+    # 看跌：上升趋势； bar2阳线； bar3高开；
     v2 = "其他"
     if bar1.low <= left_min + 0.25 * gap and bar1.close > bar2.close \
-            and bar2.open > bar2.close > bar3.open and x4 < 1:
+            and bar2.open > bar2.close > bar3.open: # and x4 < 1:
         v2 = "看涨反击线"
 
     elif bar1.high >= left_max - 0.25 * gap and bar2.close > bar1.close \
-            and bar3.open > bar2.close > bar2.open and x4a < 1:
+            and bar3.open > bar2.close > bar2.open: # and x4a < 1:
         v2 = "看跌反击线"
 
     s = OrderedDict()
