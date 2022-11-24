@@ -19,12 +19,12 @@ from czsc import signals
 
 os.environ['czsc_verbose'] = '1'
 
-data_path = r'C:\ts_data'
-dc = TsDataCache(data_path, sdt='2010-01-01', edt='20211209')
+data_path = r'D:\ts_data'
+dc = TsDataCache(data_path, sdt='2010-01-01', edt='20221001')
 
-symbol = '000001.SZ'
+symbol = '600328.SH'
 bars = dc.pro_bar_minutes(ts_code=symbol, asset='E', freq='15min',
-                          sdt='20181101', edt='20210101', adj='qfq', raw_bar=True)
+                          sdt='20210101', edt='20220930', adj='qfq', raw_bar=True)
 
 
 def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:

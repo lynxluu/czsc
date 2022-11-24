@@ -16,6 +16,8 @@ from typing import List, Union, Tuple, Dict
 from czsc.objects import Freq, Signal, RawBar, NewBar
 from czsc.traders.advanced import CzscAdvancedTrader
 from czsc.signals.utils import check_cross_info
+from czsc import signals
+
 
 
 def update_sma_cache(cat: CzscAdvancedTrader, freq: str,
@@ -37,6 +39,24 @@ def update_sma_cache(cat: CzscAdvancedTrader, freq: str,
         sma_cache[f"SMA{t}"] = ta.SMA(close, timeperiod=t)
     cat.cache[cache_key] = sma_cache
 
+def update_ma_cache(cat: CzscAdvancedTrader, freq: str,
+                     ma_params: Tuple = (5, 13, 21, 34, 55, 89, 144, 233)):
+    """更新某个级别的均线缓存
+
+    :param cat: 交易对象
+    :param freq: 指定周期
+    :param ma_params: 均线参数
+    :return:
+    """
+    assert freq in cat.freqs, f"{freq} 不在 {cat.freqs} 中"
+    cache_key = f"{freq}均线"
+    ma_cache = cat.cache.get(cache_key, {})
+    ma_cache['update_dt'] = cat.end_dt
+    close = np.array([x.close for x in cat.kas[freq].bars_raw])
+    ma_cache['close'] = close
+    for t in ma_params:
+        ma_cache[f"MA{t}"] = ta.MA(close, timeperiod=t)
+    cat.cache[cache_key] = ma_cache
 
 def update_macd_cache(cat: CzscAdvancedTrader, freq: str):
     """更新某个级别的均线缓存
@@ -45,7 +65,7 @@ def update_macd_cache(cat: CzscAdvancedTrader, freq: str):
     :param freq: 指定周期
     :return:
     """
-    assert freq in cat.freqs, f"{freq} 不在 {cat.freqs} 中"
+    assert freq in cat.freq, f"{freq} 不在 {cat.freq} 中"
     cache_key = f"{freq}MACD"
     cache = cat.cache.get(cache_key, {})
     cache['update_dt'] = cat.end_dt
@@ -168,5 +188,40 @@ def macd_base(cat: CzscAdvancedTrader, freq: str):
     return s
 
 
+def double_ma(cat: CzscAdvancedTrader, di: int, tma: List[int]) -> OrderedDict:
+    """双均线相关信号
+
+    有效信号列表：
+    60分钟_倒1K_5*10双均线_金叉_多头_任意_0
+    60分钟_倒1K_5*10双均线_死叉_空头_任意_0
+    """
+    assert len(tma) == 2, "传入参数必须是两个数字"
+    t1, t2 = tma[0], tma[1]
+    assert t2 > t1, "t2必须是长线均线，t1为短线均线"
+
+    s = OrderedDict()
+    k1 = str(cat.freq.value)
+    k2 = f"倒{di}K"
+    k3 = f"双均线{t1}*{t2}"
+
+    # 计算均线缓存
+    update_ma_cache(cat, k1, (t1, t2))
+    cache_key = f"{k1}均线"
+    ma_cache = cat.cache[cache_key]
+    assert ma_cache and ma_cache['update_dt'] == cat.end_dt
+
+    close = ma_cache['close']
+    diff = ma_cache[t1] - ma_cache[t2]
+    if len(ma_cache) == 0:
+        v1, v2 = '任意', '任意'
+    else:
+        if (diff[-1] > 0 and diff[-2] <= 0):
+            v1,v2 = "金叉","多头"
+        elif (diff[-1] < 0 and diff[-2] >= 0):
+            v1,v2 = "死叉","空头"
+
+    x1 = Signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2, v3='任意')
+    s[x1.key] = x1.value
+    return s
 
 
