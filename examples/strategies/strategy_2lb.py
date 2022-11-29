@@ -28,7 +28,7 @@ def trader_strategy(symbol):
         s.update(signals.bar_operate_span_V221111(cat.kas['15分钟'], k1='开多', span=('0935', '1450')))
         s.update(signals.bar_operate_span_V221111(cat.kas['15分钟'], k1='平多', span=('0935', '1450')))
 
-        s.update(signals.bar_zdt_V221111(cat, '日线', di=1))
+        s.update(signals.bar_zdt_V221111(cat, '日线', di=1))  
         s.update(signals.bar_zdt_V221111(cat, '日线', di=2))
         s.update(signals.bar_zdt_V221111(cat, '日线', di=3))
         s.update(signals.bar_zdt_V221111(cat, '日线', di=4))
