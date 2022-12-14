@@ -34,7 +34,7 @@ def tas_macd_bc_V221108(c: CZSC, di: int = 1) -> OrderedDict:
     :param di: 定位K
     :return:
     """
-    s = OrderedDict()
+    # s = OrderedDict()
 
     default_signals = [
         Signal(k1=str(c.freq.value), k2=f"倒{di}K", k3="MACD背驰辅助", v1="底部", v2='其他', v3='其他'),
@@ -56,6 +56,7 @@ def tas_macd_bc_V221108(c: CZSC, di: int = 1) -> OrderedDict:
     else:
         v1 = "其他"
 
+    s = OrderedDict()
     signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1)
     s[signal.key] = signal.value
     return s
@@ -265,7 +266,8 @@ def trader_strategy(symbol):
         s.update(signals.bar_zdt_V221110(cat.kas['15分钟'], di=1))
 
         signals.update_macd_cache(cat.kas['30分钟'])
-        s.update(tas_macd_bc_V221108(cat.kas['30分钟']), di=1)
+        # s.update(tas_macd_bc_V221108(cat.kas['30分钟']), di=1)
+        s.update(tas_macd_area_compare_V221106(cat.kas['30分钟']), di=55)
         s.update(tas_dif_zero_V221106(cat.kas['30分钟']), di=55)
         s.update(tas_dea_cross_V221106(cat.kas['30分钟']), di=55)
         s.update(tas_macd_zs_v221106(cat.kas['30分钟']), di=55)
@@ -285,8 +287,10 @@ def trader_strategy(symbol):
         Event(name="开多", operate=Operate.LO, factors=[
             Factor(name="低吸", signals_all=[
                 Signal("交易_0935_1450_是_任意_任意_0"),
-                Signal("30分钟_倒1K_MACD背驰辅助_底部_任意_任意_0"),
+                # Signal("30分钟_倒1K_MACD背驰辅助_底部_任意_任意_0"),
+                Signal('30分钟_绿柱子_背驰_绿柱子_是_任意_0'),
                 Signal("30分钟_近55根K线DEA_上穿0轴_1次_任意_任意_0"),
+                Signal('30分钟_近55根K线DEA_处于0轴以上_是_任意_任意_0'),
                 Signal("30分钟_近55根K线DIF_回抽0轴_是_任意_任意_0"),
                 Signal("30分钟_K线价格_冲高回落_中枢之上_任意_任意_0"),
             ], signals_not=[
@@ -294,7 +298,8 @@ def trader_strategy(symbol):
                 Signal("日线_D1K_MACD强弱_超强_任意_任意_0"),
                 Signal("周线_D1K_MACD强弱_超强_任意_任意_0"),
                 Signal("周线_D1K_MACD_任意_向上_任意_0"),
-                Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
+                # Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
+                Signal('30分钟_近55根K线DEA_处于0轴以下_是_任意_任意_0'),
             ]),
         ]),
 
@@ -305,11 +310,14 @@ def trader_strategy(symbol):
               ],
               factors=[
                   Factor(name="30分钟顶背驰", signals_all=[
-                      Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
+                      # Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
+                      Signal('30分钟_红柱子_背驰_红柱子_是_任意_0'),
                   ]),
 
                   Factor(name="持有资金", signals_all=[
-                      Signal('30分钟_倒1K_MACD背驰辅助_其他_任意_任意_0'),
+                      # Signal('30分钟_倒1K_MACD背驰辅助_其他_任意_任意_0'),
+                      Signal('30分钟_绿柱子_背驰_绿柱子_否_任意_0'),
+                      Signal('30分钟_红柱子_背驰_红柱子_否_任意_0'),
                   ]),
               ]),
     ]
@@ -341,7 +349,7 @@ results_path = r"D:\ts_data\three_buy"
 # 策略回放参数设置【可选】
 # 300498.SZ#E 温氏股份, 002234.SZ#E 民和股份 300438.SZ#E 鹏辉能源
 replay_params = {
-    "symbol": "300498.SZ#E",  # 回放交易品种
+    "symbol": "300438.SZ#E",  # 回放交易品种
     # "symbol": "000001.SZ#E",  # 回放交易品种
     "sdt": "20150101",  # K线数据开始时间
     "mdt": "20210101",  # 策略回放开始时间
