@@ -13,20 +13,35 @@ from czsc.objects import Freq, Operate, Signal, Factor, Event
 from czsc.traders import CzscAdvancedTrader
 from czsc.objects import PositionLong, PositionShort, RawBar
 from czsc.utils import get_sub_elements
+from czsc.signals.utils import down_cross_count
 
 
 def tas_macd_bc_V221108(c: CZSC, di: int = 1) -> OrderedDict:
     """获取倒数第i根K线的MACD背驰辅助信号
 
     底背弛辅助条件：
-    1）最近10根K线的MACD为绿柱；
-    2）最近10根K线的最低点 == 最近3根K线的最低点；
-    3）最近10根K线的MACD绿柱最小值 < 最近3根K线的MACD绿柱最小值
+    1）最近10根K线的MACD为绿柱； --确保下降趋势的连续性
+    2）最近10根K线的最低点 == 最近3根K线的最低点； --确保在相对底部
+    3）最近10根K线的MACD绿柱最小值 < 最近3根K线的MACD绿柱最小值; --刚开始跌,确保下跌三天后才取
+
+    信号列表：
+    - Signal('15分钟_倒1K_MACD背驰辅助_底部_任意_任意_0')
+    - Signal('15分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0')
+    - Signal('15分钟_倒1K_MACD背驰辅助_其他_任意_任意_0')
+
 
     :param c: CZSC对象
     :param di: 定位K
     :return:
     """
+    s = OrderedDict()
+
+    default_signals = [
+        Signal(k1=str(c.freq.value), k2=f"倒{di}K", k3="MACD背驰辅助", v1="底部", v2='其他', v3='其他'),
+        Signal(k1=str(c.freq.value), k2=f"倒{di}K", k3="MACD背驰辅助", v1="顶部", v2='其他', v3='其他'),
+        Signal(k1=str(c.freq.value), k2=f"倒{di}K", k3="MACD背驰辅助", v1="其他", v2='其他', v3='其他')
+    ]
+
     k1, k2, k3 = str(c.freq.value), f"D{di}K", "MACD背驰辅助"
 
     bars = get_sub_elements(c.bars_raw, di=1, n=10)
@@ -41,7 +56,6 @@ def tas_macd_bc_V221108(c: CZSC, di: int = 1) -> OrderedDict:
     else:
         v1 = "其他"
 
-    s = OrderedDict()
     signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1)
     s[signal.key] = signal.value
     return s
@@ -75,11 +89,11 @@ def tas_dea_cross_V221106(c: CZSC, di=55) -> OrderedDict:
 
     dea = [x.cache['MACD']['dea'] for x in c.bars_raw[-di:]]
 
-    # dea上穿0轴
+    # dea上穿0轴 , dea和一串0的数组比较
     up = down_cross_count([0 for i in range(len(dea))], dea)
     down = down_cross_count(dea, [0 for i in range(len(dea))])
 
-    # 上穿一次0轴，最后一根K线的DEA在0轴上，倒数第5根K线DEA在0轴下
+    # 上穿一次0轴，最后一根K线的DEA在0轴上，倒数第5根K线DEA在0轴下?
     if up == 1 and down == 0 and dea[-1] > 0:
         v = Signal(k1=str(c.freq.value), k2=f"近{di}根K线DEA", k3="上穿0轴", v1=f"1次")
         s[v.key] = v.value
@@ -121,7 +135,7 @@ def tas_dif_zero_V221106(c: CZSC, di=55) -> OrderedDict:
     s[v.key] = v.value
     return s
 
-def macd_zs_v221106(c: CZSC, di=55) -> OrderedDict:
+def tas_macd_zs_v221106(c: CZSC, di=55) -> OrderedDict:
     """单纯通过价格判断股价突破中枢
 
     信号逻辑：
@@ -158,10 +172,9 @@ def macd_zs_v221106(c: CZSC, di=55) -> OrderedDict:
 
 from czsc.signals.utils import check_cross_info
 
-
-# 计算倒di根k线Macd面积
-# macd柱子面积背驰
 def tas_macd_area_compare_V221106(c: CZSC, di: int = 55) -> OrderedDict:
+    # 计算倒di根k线Macd面积
+    # macd柱子面积背驰
     """MACD柱子面积背驰
 
     信号逻辑：
@@ -181,6 +194,7 @@ def tas_macd_area_compare_V221106(c: CZSC, di: int = 55) -> OrderedDict:
     k1, k2, k3 = f"{c.freq.value}_绿柱子_背驰".split('_')
     m1, m2, m3 = f"{c.freq.value}_红柱子_背驰".split('_')
 
+    # dif快线, dea慢线, cross快慢线交叉点
     dif = [x.cache['MACD']['dif'] for x in c.bars_raw[-di:]]
     dea = [x.cache['MACD']['dea'] for x in c.bars_raw[-di:]]
 
@@ -245,12 +259,16 @@ def trader_strategy(symbol):
 
     def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+
+        # 基础限制,交易时间限定, 涨跌停限定
         s.update(signals.bar_operate_span_V221111(cat.kas['15分钟'], k1='交易', span=('0935', '1450')))
         s.update(signals.bar_zdt_V221110(cat.kas['15分钟'], di=1))
 
-        signals.update_macd_cache(cat.kas['60分钟'])
-        s.update(tas_macd_bc_V221108(cat.kas['60分钟'], di=1))
-        s.update(signals.tas_macd_base_V221028(cat.kas['60分钟'], di=1, key='macd'))
+        signals.update_macd_cache(cat.kas['30分钟'])
+        s.update(tas_macd_bc_V221108(cat.kas['30分钟']), di=1)
+        s.update(tas_dif_zero_V221106(cat.kas['30分钟']), di=55)
+        s.update(tas_dea_cross_V221106(cat.kas['30分钟']), di=55)
+        s.update(tas_macd_zs_v221106(cat.kas['30分钟']), di=55)
 
         signals.update_macd_cache(cat.kas['日线'])
         s.update(signals.tas.tas_macd_power_V221108(cat.kas['日线'], di=1))
@@ -267,13 +285,16 @@ def trader_strategy(symbol):
         Event(name="开多", operate=Operate.LO, factors=[
             Factor(name="低吸", signals_all=[
                 Signal("交易_0935_1450_是_任意_任意_0"),
-                Signal("60分钟_D1K_MACD_多头_任意_任意_0"),
+                Signal("30分钟_倒1K_MACD背驰辅助_底部_任意_任意_0"),
+                Signal("30分钟_近55根K线DEA_上穿0轴_1次_任意_任意_0"),
+                Signal("30分钟_近55根K线DIF_回抽0轴_是_任意_任意_0"),
+                Signal("30分钟_K线价格_冲高回落_中枢之上_任意_任意_0"),
             ], signals_not=[
                 Signal("15分钟_D1K_ZDT_涨停_任意_任意_0"),
                 Signal("日线_D1K_MACD强弱_超强_任意_任意_0"),
                 Signal("周线_D1K_MACD强弱_超强_任意_任意_0"),
                 Signal("周线_D1K_MACD_任意_向上_任意_0"),
-                Signal("60分钟_D1K_MACD背驰辅助_顶部_任意_任意_0"),
+                Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
             ]),
         ]),
 
@@ -283,19 +304,19 @@ def trader_strategy(symbol):
                   Signal("15分钟_D1K_ZDT_其他_任意_任意_0"),
               ],
               factors=[
-                  Factor(name="60分钟顶背驰", signals_all=[
-                      Signal("60分钟_D1K_MACD背驰辅助_顶部_任意_任意_0"),
+                  Factor(name="30分钟顶背驰", signals_all=[
+                      Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
                   ]),
 
                   Factor(name="持有资金", signals_all=[
-                      Signal("60分钟_D1K_MACD_空头_任意_任意_0"),
+                      Signal('30分钟_倒1K_MACD背驰辅助_其他_任意_任意_0'),
                   ]),
               ]),
     ]
 
     tactic = {
         "base_freq": '15分钟',
-        "freqs": ['60分钟', '日线', '周线'],
+        "freqs": ['30分钟', '日线', '周线'],
         "get_signals": get_signals,
         "long_pos": long_pos,
         "long_events": long_events,
@@ -315,11 +336,12 @@ dc = TsDataCache(r"D:\ts_data")
 symbols = get_symbols(dc, 'train')
 
 # 执行结果路径
-results_path = r"D:\ts_data\f60_MACD"
+results_path = r"D:\ts_data\three_buy"
 
 # 策略回放参数设置【可选】
+# 300498.SZ#E 温氏股份, 002234.SZ#E 民和股份 300438.SZ#E 鹏辉能源
 replay_params = {
-    "symbol": "300724.SZ#E",  # 回放交易品种
+    "symbol": "300498.SZ#E",  # 回放交易品种
     # "symbol": "000001.SZ#E",  # 回放交易品种
     "sdt": "20150101",  # K线数据开始时间
     "mdt": "20210101",  # 策略回放开始时间
