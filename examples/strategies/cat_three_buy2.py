@@ -23,9 +23,9 @@ def get_macd_third_buy(c: CZSC, di=55):
     c：base-bar
     di:基础K线数量
     完全分类：
-    Signal('⽇线_70根K线MACD_与0轴交叉次数_3次以下_任意_任意_0'),
-    Signal('⽇线_70根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
-    Signal('⽇线_70根K线DEA_上穿0轴次数_1次_任意_任意_0'),
+    Signal('⽇线_55根K线MACD_与0轴交叉次数_3次以下_任意_任意_0'),
+    Signal('⽇线_55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
+    Signal('⽇线_55根K线DEA_上穿0轴次数_1次_任意_任意_0'),
     Signal('⽇线_倒3K_MACD⽅向_向上_任意_任意_0'),
     Signal('⽇线_倒3K_MACD⽅向_模糊_任意_任意_0'),
     Signal('⽇线_倒3K_MACD⽅向_向下_任意_任意_0'),
@@ -37,8 +37,9 @@ def get_macd_third_buy(c: CZSC, di=55):
     freq: Freq = c.freq
 
     default_signals = [
-        Signal(k1=str(freq.value), k2=f"{di}根K线MACD", k3=f"与0轴交叉次数", v1="其他", v2='其他', v3="其他"),
-        Signal(k1=str(freq.value), k2=f"{di}根K线DEA", k3=f"上穿0轴次数", v1="其他", v2='其他', v3="其他"),
+        # Signal(k1=str(freq.value), k2=f"{di}根K线MACD", k3=f"与0轴交叉次数", v1="其他", v2='其他', v3="其他"),
+        Signal(k1=str(freq.value), k2=f"{di}根K线MACD", k3="与0轴交叉次数", v1="其他", v2='其他', v3="其他"),
+        Signal(k1=str(freq.value), k2=f"{di}根K线DEA", k3="上穿0轴次数", v1="其他", v2='其他', v3="其他"),
         Signal(k1=str(freq.value), k2='倒3K', k3="MACD⽅向", v1="其他", v2='其他', v3="其他"),
         Signal(k1=str(freq.value), k2='⾦叉⾯积', k3="背驰", v1="其他", v2='其他', v3="其他"),
         Signal(k1=str(freq.value), k2='死叉⾯积', k3="背驰", v1="其他", v2='其他', v3="其他"),

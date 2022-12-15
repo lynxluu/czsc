@@ -13,8 +13,7 @@ from czsc.objects import Freq, Operate, Signal, Factor, Event
 from czsc.traders import CzscAdvancedTrader
 from czsc.objects import PositionLong, PositionShort, RawBar
 from czsc.utils import get_sub_elements
-from czsc.signals.utils import down_cross_count
-
+from czsc.signals.utils import down_cross_count,check_cross_info
 
 def tas_macd_bc_V221108(c: CZSC, di: int = 1) -> OrderedDict:
     """获取倒数第i根K线的MACD背驰辅助信号
@@ -170,9 +169,6 @@ def tas_macd_zs_v221106(c: CZSC, di=55) -> OrderedDict:
 
     return s
 
-
-from czsc.signals.utils import check_cross_info
-
 def tas_macd_area_compare_V221106(c: CZSC, di: int = 55) -> OrderedDict:
     # 计算倒di根k线Macd面积
     # macd柱子面积背驰
@@ -252,6 +248,130 @@ def tas_macd_area_compare_V221106(c: CZSC, di: int = 55) -> OrderedDict:
 
     return s
 
+
+# 计算倒di根k线Macd面积
+# macd红绿柱子变换次数
+def tas_macd_change_V221105(c: CZSC, di: int = 55) -> OrderedDict:
+    """MACD颜色变化
+    信号逻辑：
+    计算最近di根K线对应的macd红绿柱子变换次数
+
+    信号列表：
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_0次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_1次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_2次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_3次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_4次_任意_任意_0')
+                                …
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_9次_任意_任意_0')
+
+    :param c: czsc对象
+    :param di:最近di跟K线
+    :return:
+    """
+
+    k1, k2, k3 = f"{c.freq.value}_倒{di}根K线MACD_与0轴交叉次数".split('_')
+
+    dif = [x.cache['MACD']['dif'] for x in c.bars_raw[-di:]]
+    dea = [x.cache['MACD']['dea'] for x in c.bars_raw[-di:]]
+
+    cross = check_cross_info(dif, dea)
+
+    # 过滤低级别信号抖动造成的金叉死叉(这个参数根据自身需要进行修改）
+    re_cross = [i for i in cross if i['距离'] >= 2]
+    cross_ = []
+
+    if len(re_cross) == 0:
+        num = 0
+
+    for i in range(0, len(re_cross)):
+        if len(cross_) >= 1 and re_cross[i]['类型'] == re_cross[i - 1]['类型']:
+            # 不将上一个元素加入cross_
+            del cross_[-1]
+
+            # 我这里只重新计算了面积、快慢线的高低点，其他需要重新计算的参数各位可自行编写
+            re_cross[i]['面积'] = re_cross[i - 1]['面积'] + re_cross[i]['面积']
+
+            re_cross[i]['快线高点'] = max(re_cross[i - 1]['快线高点'], re_cross[i]['快线高点'])
+            re_cross[i]['快线低点'] = min(re_cross[i - 1]['快线低点'], re_cross[i]['快线低点'])
+
+            re_cross[i]['慢线高点'] = max(re_cross[i - 1]['慢线高点'], re_cross[i]['慢线高点'])
+            re_cross[i]['慢线低点'] = min(re_cross[i - 1]['慢线低点'], re_cross[i]['慢线低点'])
+
+            cross_.append(re_cross[i])
+        else:
+            cross_.append(re_cross[i])
+        num = len(cross_)
+    # macd与0轴交叉次数
+    v1 = f"{num}次"
+
+    s = OrderedDict()
+    signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1)
+    s[signal.key] = signal.value
+
+    return s
+
+
+def tas_macd_cross_cnt_V221105(c: CZSC, di: int = 55) -> OrderedDict:
+    """MACD颜色变化
+    信号逻辑：
+    计算最近di根K线对应的macd红绿柱子变换次数
+
+    信号列表：
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_0次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_1次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_2次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_3次_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_4次_任意_任意_0')
+                                …
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_9次_任意_任意_0')
+
+    :param c: czsc对象
+    :param di:最近di跟K线
+    :return:
+    """
+
+    k1, k2, k3 = f"{c.freq.value}_倒{di}根K线MACD_与0轴交叉次数".split('_')
+
+    dif = [x.cache['MACD']['dif'] for x in c.bars_raw[-di:]]
+    dea = [x.cache['MACD']['dea'] for x in c.bars_raw[-di:]]
+
+    cross = check_cross_info(dif, dea)
+
+    # 过滤低级别信号抖动造成的金叉死叉(这个参数根据自身需要进行修改）
+    re_cross = [i for i in cross if i['距离'] >= 2]
+    cross_ = []
+
+    if len(re_cross) == 0:
+        num = 0
+
+    for i in range(0, len(re_cross)):
+        if len(cross_) >= 1 and re_cross[i]['类型'] == re_cross[i - 1]['类型']:
+            # 不将上一个元素加入cross_
+            del cross_[-1]
+
+            # 我这里只重新计算了面积、快慢线的高低点，其他需要重新计算的参数各位可自行编写
+            re_cross[i]['面积'] = re_cross[i - 1]['面积'] + re_cross[i]['面积']
+
+            re_cross[i]['快线高点'] = max(re_cross[i - 1]['快线高点'], re_cross[i]['快线高点'])
+            re_cross[i]['快线低点'] = min(re_cross[i - 1]['快线低点'], re_cross[i]['快线低点'])
+
+            re_cross[i]['慢线高点'] = max(re_cross[i - 1]['慢线高点'], re_cross[i]['慢线高点'])
+            re_cross[i]['慢线低点'] = min(re_cross[i - 1]['慢线低点'], re_cross[i]['慢线低点'])
+
+            cross_.append(re_cross[i])
+        else:
+            cross_.append(re_cross[i])
+        num = len(cross_)
+    # macd与0轴交叉次数
+    v1 = f"{num}次"
+
+    s = OrderedDict()
+    signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1)
+    s[signal.key] = signal.value
+
+    return s
+
 # 定义择时交易策略，策略函数名称必须是 trader_strategy
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -268,8 +388,8 @@ def trader_strategy(symbol):
         signals.update_macd_cache(cat.kas['30分钟'])
         # s.update(tas_macd_bc_V221108(cat.kas['30分钟']), di=1)
         s.update(tas_macd_area_compare_V221106(cat.kas['30分钟']), di=55)
-        s.update(tas_dif_zero_V221106(cat.kas['30分钟']), di=55)
-        s.update(tas_dea_cross_V221106(cat.kas['30分钟']), di=55)
+        # s.update(tas_dif_zero_V221106(cat.kas['30分钟']), di=55)
+        # s.update(tas_dea_cross_V221106(cat.kas['30分钟']), di=55)
         s.update(tas_macd_zs_v221106(cat.kas['30分钟']), di=55)
 
         signals.update_macd_cache(cat.kas['日线'])
@@ -292,14 +412,14 @@ def trader_strategy(symbol):
                 Signal("30分钟_近55根K线DEA_上穿0轴_1次_任意_任意_0"),
                 Signal('30分钟_近55根K线DEA_处于0轴以上_是_任意_任意_0'),
                 Signal("30分钟_近55根K线DIF_回抽0轴_是_任意_任意_0"),
-                Signal("30分钟_K线价格_冲高回落_中枢之上_任意_任意_0"),
+                # Signal("30分钟_K线价格_冲高回落_中枢之上_任意_任意_0"),
             ], signals_not=[
                 Signal("15分钟_D1K_ZDT_涨停_任意_任意_0"),
                 Signal("日线_D1K_MACD强弱_超强_任意_任意_0"),
                 Signal("周线_D1K_MACD强弱_超强_任意_任意_0"),
                 Signal("周线_D1K_MACD_任意_向上_任意_0"),
                 # Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
-                Signal('30分钟_近55根K线DEA_处于0轴以下_是_任意_任意_0'),
+                # Signal('30分钟_近55根K线DEA_处于0轴以下_是_任意_任意_0'),
             ]),
         ]),
 
@@ -353,5 +473,5 @@ replay_params = {
     # "symbol": "000001.SZ#E",  # 回放交易品种
     "sdt": "20150101",  # K线数据开始时间
     "mdt": "20210101",  # 策略回放开始时间
-    "edt": "20221128",  # 策略回放结束时间
+    "edt": "20221214",  # 策略回放结束时间
 }
