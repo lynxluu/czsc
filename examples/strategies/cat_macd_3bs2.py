@@ -150,6 +150,7 @@ def trader_strategy(symbol):
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
         s.update(signals.bar_operate_span_V221111(cat.kas['15分钟'], k1='交易', span=('0935', '1450')))
         s.update(signals.bar_zdt_V221110(cat.kas['15分钟'], di=1))
+        s.update(get_macd_third_buy(cat.kas["15分钟"]),di=55)
 
         s.update(signals.pos.get_s_long01(cat, th=500))                  # 5个点⽌
         s.update(signals.pos.get_s_long02(cat, th=2000))                 # 回撤20
