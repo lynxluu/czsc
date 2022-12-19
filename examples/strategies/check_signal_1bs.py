@@ -154,8 +154,8 @@ dc = TsDataCache(r"D:\ts_data")
 
 
 check_params = {
-    # "symbol": "002234.SZ#E",  # 交易品种，格式为 {ts_code}#{asset}
-    "symbol": "000001.SZ#E",    # 交易品种，格式为 {ts_code}#{asset}
+    "symbol": "002234.SZ#E",  # 交易品种，格式为 {ts_code}#{asset}
+    # "symbol": "000001.SZ#E",    # 交易品种，格式为 {ts_code}#{asset}
     "sdt": "20200101",  # 开始时间
     "edt": "20221218",  # 结束时间
 }
