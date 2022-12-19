@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-author: zengbin93
-email: zeng_bin8888@163.com
-create_dt: 2021/12/12 22:00
-"""
 import os
 import pandas as pd
 from czsc.traders.ts_backtest import TsDataCache, TsStocksBacktest, freq_cn2ts
@@ -18,7 +12,7 @@ pd.set_option('display.max_columns', 20)
 
 
 # data_path 是 TS_CACHE 缓存数据文件夹所在目录
-dc = TsDataCache(data_path=r"D:\ts_data", refresh=False, sdt="20120101", edt="20221001")
+dc = TsDataCache(data_path=r"D:\ts_data_czsc", refresh=False, sdt="20120101", edt="20221001")
 
 # 获取策略的基础K线周期，回测开始时间 sdt，回测结束时间 edt，初始化K线数量init_n
 freq = freq_cn2ts[strategy('000001.SH')['base_freq']]
@@ -64,4 +58,3 @@ if __name__ == '__main__':
     # run_backtest(step_seq=('index', 'train'))
     # run_backtest(step_seq=('check', 'index', 'train'))
     # run_backtest(step_seq=('check', 'index', 'train', 'valid'))
-

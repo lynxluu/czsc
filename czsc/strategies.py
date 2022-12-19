@@ -12,7 +12,7 @@ from czsc.objects import Freq, Operate, Signal, Factor, Event
 from collections import OrderedDict
 from czsc.traders import CzscAdvancedTrader
 from czsc.objects import PositionLong, PositionShort, RawBar
-
+# from czsc import analyze
 
 def trader_standard(symbol, T0=False, min_interval=3600*4):
     """择时策略编写的一些标准说明
@@ -153,5 +153,236 @@ def trader_strategy_a(symbol):
 
     return tactic
 
+def trader_stocks_base_t1(symbol):
+    """60分钟MACD金叉死叉"""
+    def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
+        s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+        for _, c in cat.kas.items():
+            if c.freq in [Freq.F60]:
+                s.update(signals.ta.get_s_macd(c, di=1))
+                s.update(signals.other.get_s_zdt(c, di=1))
+
+        return s
 
 
+    # 定义多头持仓对象和交易事件
+    long_pos = PositionLong(symbol, hold_long_a=1, hold_long_b=1, hold_long_c=1,
+                            T0=False, long_min_interval=3600*4)
+    long_events = [
+        Event(name="开多", operate=Operate.LO, factors=[
+            Factor(name="持多", signals_all=[
+                Signal("60分钟_倒1K_MACD多空_多头_任意_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+
+        Event(name="平多", operate=Operate.LE, factors=[
+            Factor(name="持币", signals_all=[
+                Signal("60分钟_倒1K_MACD多空_空头_任意_任意_0"),
+                Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+    ]
+
+    # 定义空头持仓对象和交易事件
+    # short_pos = PositionShort(symbol, hold_short_a=1, hold_short_b=1, hold_short_c=1,
+    #                         T0=False, short_min_interval=3600*4)
+    # short_events = [
+    #     Event(name="开空", operate=Operate.SO, factors=[
+    #         Factor(name="持空", signals_all=[
+    #             Signal("60分钟_倒1K_MACD多空_空头_任意_任意_0"),
+    #             Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+    #         ]),
+    #     ]),
+    #
+    #     Event(name="平空", operate=Operate.SE, factors=[
+    #         Factor(name="持币", signals_all=[
+    #             Signal("60分钟_倒1K_MACD多空_多头_任意_任意_0"),
+    #             Signal("60分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+    #         ]),
+    #     ]),
+    # ]
+
+    tactic = {
+        "base_freq": '60分钟',
+        "freqs": ['日线'],
+        "get_signals": get_signals,
+
+        "long_pos": long_pos,
+        "long_events": long_events,
+        "long_min_interval": 3600 * 12,
+
+        # 'short_pos':short_pos,
+        # "short_events": short_events,
+        # "short_min_interval": 3600 * 12,
+    }
+
+    return tactic
+
+def trader_strategy_sjx(symbol):
+    """A股市场择时策略A"""
+    def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
+        s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+
+        for _, c in cat.kas.items():
+            if c.freq in [Freq.F15]:
+                s.update(signals.example.double_ma(c, di=1, t1=5,t2=10))
+                s.update(signals.other.get_s_zdt(c, di=1))
+
+        return s
+
+    # 定义多头持仓对象和交易事件
+    long_pos = PositionLong(symbol, hold_long_a=1, hold_long_b=1, hold_long_c=1,
+                            T0=False, long_min_interval=3600*4)
+    long_events = [
+        Event(name="开多", operate=Operate.LO, factors=[
+            Factor(name="低吸", signals_all=[
+                Signal("15分钟_倒1K_5*10双均线_金叉_多头_任意_0"),
+                Signal("15分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+
+        Event(name="平多", operate=Operate.LE, factors=[
+            Factor(name="持有资金", signals_all=[
+                Signal("15分钟_倒1K_5*10双均线_死叉_空头_任意_0"),
+                Signal("15分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+    ]
+
+    tactic = {
+        "base_freq": '15分钟',
+        "freqs": ['15分钟', '60分钟', '日线'],
+        "get_signals": get_signals,
+
+        "long_pos": long_pos,
+        "long_events": long_events,
+        "long_min_interval": 3600 * 12,
+
+        # 空头策略不进行定义，也就是不做空头交易
+        "short_pos": None,
+        "short_events": None,
+    }
+
+    return tactic
+
+
+def trader_third_buy(symbol, T0=False, min_interval=0):
+    """A股市场择时策略样例，支持按交易标的独立设置参数
+
+    :param symbol:
+    :param T0: 是否允许T0交易
+    :param min_interval: 最小开仓时间间隔，单位：秒
+    :return:
+    """
+
+    def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
+        s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+        s.update(signals.pos.get_s_long01(cat, th=500))  # 5个点止损
+        s.update(signals.pos.get_s_long02(cat, th=2000))  # 回撤20%止盈
+
+        for _, c in cat.kas.items():
+            if c.freq == Freq.D:
+                s.update(signals.signals.get_macd_third_buy(c))
+        return s
+
+    # 定义多头持仓对象和交易事件
+    long_pos = PositionLong(symbol, hold_long_a=1, hold_long_b=1, hold_long_c=1,
+                            T0=T0, long_min_interval=min_interval)
+
+    long_events = [
+        Event(name="开多", operate=Operate.LO, factors=[
+            Factor(name="日线三买", signals_all=[
+                Signal('日线_55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
+                Signal('日线_55根K线DEA_上穿0轴次数_1次_任意_任意_0'),
+                Signal('日线_金叉面积_背驰_是_任意_任意_0'),
+                Signal('日线_K线价格_冲高回落_中枢之上_任意_任意_0')
+            ], signals_any=[
+                Signal('日线_倒3K_MACD方向_向下_任意_任意_0'),
+                Signal('日线_倒3K_MACD方向_模糊_任意_任意_0'),
+            ]),
+        ]),
+
+        Event(name="平多", operate=Operate.LE, factors=[
+            Factor(name="日线一卖", signals_all=[
+                Signal('日线_55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
+                Signal('日线_近30根K线DEA_处于0轴以上_是_任意_任意_0'),
+                Signal('日线_近30根K线DIF_回抽0轴_是_任意_任意_0'),
+            ], signals_any=[
+                Signal('日线_死叉面积_背驰_是_任意_任意_0'),
+                Signal('日线_死叉快线_背驰_是_任意_任意_0'),
+            ]),
+            Factor(name="三买破坏", signals_all=[
+                Signal('日线_K线价格_冲高回落_中枢之内_任意_任意_0')]),
+            Factor(name="止损5%", signals_all=[
+                Signal("多头_亏损_超500BP_是_任意_任意_0")]),
+            Factor(name="最大回撤20%", signals_all=[
+                Signal("多头_回撤_超2000BP_是_任意_任意_0")]),
+        ]),
+
+    ]
+
+    tactic = {
+        "base_freq": '15分钟',
+        "freqs": ['日线'],
+        "get_signals": get_signals,
+        "signals_n": 0,
+
+        "long_pos": long_pos,
+        "long_events": long_events,
+
+        # 空头策略不进行定义，也就是不做空头交易
+        "short_pos": None,
+        "short_events": None,
+    }
+
+    return tactic
+
+
+def trader_strategy_bsb(symbol):
+    """A股市场择时策略A"""
+    def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
+        s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
+
+        for _, c in cat.kas.items():
+            if c.freq in [Freq.F15]:
+                s.update(signals.jcc.jcc_three_soldiers(c, di=1, th=0.5))
+                s.update(signals.other.get_s_zdt(c, di=1))
+
+        return s
+
+    # 定义多头持仓对象和交易事件
+    long_pos = PositionLong(symbol, hold_long_a=1, hold_long_b=1, hold_long_c=1,
+                            T0=False, long_min_interval=3600*4)
+    long_events = [
+        Event(name="开多", operate=Operate.LO, factors=[
+            Factor(name="追涨", signals_all=[
+                Signal("15分钟_D3TH50_白三兵_满足_挺进_任意_0"),
+                Signal("15分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+
+        Event(name="平多", operate=Operate.LE, factors=[
+            Factor(name="持有资金", signals_all=[
+                Signal("15分钟_D3TH50_白三兵_满足_受阻_任意_0"),
+                Signal("15分钟_D3TH50_白三兵_满足_停顿_任意_0"),
+                Signal("15分钟_倒1K_ZDT_非涨跌停_任意_任意_0"),
+            ]),
+        ]),
+    ]
+
+    tactic = {
+        "base_freq": '15分钟',
+        "freqs": ['60分钟', '日线'],
+        "get_signals": get_signals,
+
+        "long_pos": long_pos,
+        "long_events": long_events,
+        "long_min_interval": 3600 * 12,
+
+        # 空头策略不进行定义，也就是不做空头交易
+        "short_pos": None,
+        "short_events": None,
+    }
+
+    return tactic

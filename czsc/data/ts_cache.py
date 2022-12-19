@@ -33,6 +33,10 @@ def update_bars_return(kline: pd.DataFrame, bar_numbers=None):
     for col in ['open', 'close', 'high', 'low']:
         kline[col] = kline[col].round(4)
 
+    # 判断kline行数，避免只有1根k线导致的后续报错
+    if kline.shape[0] < 2:
+        return None
+
     assert kline['dt'][0] < kline['dt'][1], "kline 必须是时间升序"
     if not bar_numbers:
         bar_numbers = (1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377)
