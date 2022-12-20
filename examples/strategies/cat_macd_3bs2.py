@@ -157,8 +157,8 @@ def trader_strategy(symbol):
         signals.update_macd_cache(cat.kas['日线'])
         s.update(get_macd_third_buy(cat.kas['日线']))
 
-        s.update(signals.pos.get_s_long01(cat, th=500))                  # 5个点⽌
-        s.update(signals.pos.get_s_long02(cat, th=2000))                 # 回撤20
+        s.update(signals.pos.get_s_long01(cat, th=500))                  # 亏损5个点止损
+        s.update(signals.pos.get_s_long02(cat, th=2000))                 # 回撤20个点止盈
         for _, c in cat.kas.items():
             if c.freq == Freq.D:
                 s.update(get_macd_third_buy(c))
@@ -221,7 +221,7 @@ dc = TsDataCache(r"D:\ts_data")
 symbols = get_symbols(dc, 'train')
 
 # 执行结果路径
-results_path = r"D:\ts_data\three_buy2"
+results_path = r"D:\ts_data\macd_3bs2"
 
 # 策略回放参数设置【可选】
 replay_params = {

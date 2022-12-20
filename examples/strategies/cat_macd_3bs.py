@@ -372,6 +372,68 @@ def tas_macd_cross_cnt_V221105(c: CZSC, di: int = 55) -> OrderedDict:
 
     return s
 
+
+def tas_macd_cross_cnt_div(c: CZSC, di: int = 55, dcnt: int = 4 ) -> OrderedDict:
+    """MACD颜色变化
+    信号逻辑：
+    计算最近di根K线对应的macd红绿柱子变换次数
+
+    信号列表：
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_3次以下_任意_任意_0')
+    - Signal('15分钟_倒55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0')
+
+    :param c: czsc对象
+    :param di:最近di跟K线
+    :return:
+    """
+
+    k1, k2, k3 = f"{c.freq.value}_倒{di}根K线MACD_与0轴交叉次数".split('_')
+
+    dif = [x.cache['MACD']['dif'] for x in c.bars_raw[-di:]]
+    dea = [x.cache['MACD']['dea'] for x in c.bars_raw[-di:]]
+
+    cross = check_cross_info(dif, dea)
+
+    # 过滤低级别信号抖动造成的金叉死叉(这个参数根据自身需要进行修改）
+    re_cross = [i for i in cross if i['距离'] >= 2]
+    cross_ = []
+
+    if len(re_cross) == 0:
+        num = 0
+
+    for i in range(0, len(re_cross)):
+        if len(cross_) >= 1 and re_cross[i]['类型'] == re_cross[i - 1]['类型']:
+            # 不将上一个元素加入cross_
+            del cross_[-1]
+
+            # 我这里只重新计算了面积、快慢线的高低点，其他需要重新计算的参数各位可自行编写
+            re_cross[i]['面积'] = re_cross[i - 1]['面积'] + re_cross[i]['面积']
+
+            re_cross[i]['快线高点'] = max(re_cross[i - 1]['快线高点'], re_cross[i]['快线高点'])
+            re_cross[i]['快线低点'] = min(re_cross[i - 1]['快线低点'], re_cross[i]['快线低点'])
+
+            re_cross[i]['慢线高点'] = max(re_cross[i - 1]['慢线高点'], re_cross[i]['慢线高点'])
+            re_cross[i]['慢线低点'] = min(re_cross[i - 1]['慢线低点'], re_cross[i]['慢线低点'])
+
+            cross_.append(re_cross[i])
+        else:
+            cross_.append(re_cross[i])
+        num = len(cross_)
+
+    # macd与0轴交叉次数
+    if 0 <= num < dcnt:
+        v1 = f"{num}次以下"
+    elif num >= dcnt:
+        v1 = f"{num}次以上"
+
+
+    s = OrderedDict()
+    signal = Signal(k1=k1, k2=k2, k3=k3, v1=v1)
+    s[signal.key] = signal.value
+
+    return s
+
+
 # 定义择时交易策略，策略函数名称必须是 trader_strategy
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -385,19 +447,41 @@ def trader_strategy(symbol):
         s.update(signals.bar_operate_span_V221111(cat.kas['15分钟'], k1='交易', span=('0935', '1450')))
         s.update(signals.bar_zdt_V221110(cat.kas['15分钟'], di=1))
 
-        signals.update_macd_cache(cat.kas['30分钟'])
-        # s.update(tas_macd_bc_V221108(cat.kas['30分钟']), di=1)
-        s.update(tas_macd_area_compare_V221106(cat.kas['30分钟']), di=55)
-        # s.update(tas_dif_zero_V221106(cat.kas['30分钟']), di=55)
-        # s.update(tas_dea_cross_V221106(cat.kas['30分钟']), di=55)
-        s.update(tas_macd_zs_v221106(cat.kas['30分钟']), di=55)
 
+        # 更新macd缓存
         signals.update_macd_cache(cat.kas['日线'])
-        s.update(signals.tas.tas_macd_power_V221108(cat.kas['日线'], di=1))
+        # macd变色次数
+        signals.update(tas_macd_cross_cnt_div(cat.kas['日线'], di=55, dcnt=4))
+        # dea上穿0轴
+        signals.update(tas_dea_cross_V221106(cat.kas['日线'],di=55))
+        # s.update(get_macd_third_buy(cat.kas['日线']))
+        # macd面积背驰
+        signals.update(tas_macd_area_compare_V221106(cat.kas['日线'],di=55))
 
-        signals.update_macd_cache(cat.kas['周线'])
-        s.update(signals.tas.tas_macd_power_V221108(cat.kas['周线'], di=1))
-        s.update(signals.tas_macd_base_V221028(cat.kas['周线'], di=1, key='macd'))
+
+        # 止损止盈
+        s.update(signals.pos.get_s_long01(cat, th=500))                  # 亏损5个点止损
+        s.update(signals.pos.get_s_long02(cat, th=2000))                 # 回撤20个点止盈
+
+        # 更新多周期macd缓存
+        for _, c in cat.kas.items():
+            if c.freq == Freq.D:
+                # s.update(get_macd_third_buy(c))
+        return s
+
+        # signals.update_macd_cache(cat.kas['30分钟'])
+        # # s.update(tas_macd_bc_V221108(cat.kas['30分钟']), di=1)
+        # s.update(tas_macd_area_compare_V221106(cat.kas['30分钟']), di=55)
+        # # s.update(tas_dif_zero_V221106(cat.kas['30分钟']), di=55)
+        # # s.update(tas_dea_cross_V221106(cat.kas['30分钟']), di=55)
+        # s.update(tas_macd_zs_v221106(cat.kas['30分钟']), di=55)
+        #
+        # signals.update_macd_cache(cat.kas['日线'])
+        # s.update(signals.tas.tas_macd_power_V221108(cat.kas['日线'], di=1))
+        #
+        # signals.update_macd_cache(cat.kas['周线'])
+        # s.update(signals.tas.tas_macd_power_V221108(cat.kas['周线'], di=1))
+        # s.update(signals.tas_macd_base_V221028(cat.kas['周线'], di=1, key='macd'))
         return s
 
     # 定义多头持仓对象和交易事件
@@ -405,47 +489,41 @@ def trader_strategy(symbol):
 
     long_events = [
         Event(name="开多", operate=Operate.LO, factors=[
-            Factor(name="低吸", signals_all=[
-                Signal("交易_0935_1450_是_任意_任意_0"),
-                # Signal("30分钟_倒1K_MACD背驰辅助_底部_任意_任意_0"),
-                Signal('30分钟_绿柱子_背驰_绿柱子_是_任意_0'),
-                Signal("30分钟_近55根K线DEA_上穿0轴_1次_任意_任意_0"),
-                Signal('30分钟_近55根K线DEA_处于0轴以上_是_任意_任意_0'),
-                Signal("30分钟_近55根K线DIF_回抽0轴_是_任意_任意_0"),
-                # Signal("30分钟_K线价格_冲高回落_中枢之上_任意_任意_0"),
-            ], signals_not=[
-                Signal("15分钟_D1K_ZDT_涨停_任意_任意_0"),
-                Signal("日线_D1K_MACD强弱_超强_任意_任意_0"),
-                Signal("周线_D1K_MACD强弱_超强_任意_任意_0"),
-                Signal("周线_D1K_MACD_任意_向上_任意_0"),
-                # Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
-                # Signal('30分钟_近55根K线DEA_处于0轴以下_是_任意_任意_0'),
+            Factor(name="⽇线三买", signals_all=[
+                Signal('⽇线_55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
+                Signal('⽇线_55根K线DEA_上穿0轴次数_1次_任意_任意_0'),
+                # Signal('⽇线_⾦叉⾯积_背驰_是_任意_任意_0'),
+                Signal('⽇线_红柱子_背驰_红柱子_是_任意_0'),
+                Signal('⽇线_K线价格_冲⾼回落_中枢之上_任意_任意_0')
+            ], signals_any=[
+                Signal('⽇线_倒3K_MACD⽅向_向下_任意_任意_0'),
+                Signal('⽇线_倒3K_MACD⽅向_模糊_任意_任意_0'),
             ]),
         ]),
 
-        Event(name="平多", operate=Operate.LE,
-              signals_all=[
-                  Signal("交易_0935_1450_是_任意_任意_0"),
-                  Signal("15分钟_D1K_ZDT_其他_任意_任意_0"),
-              ],
-              factors=[
-                  Factor(name="30分钟顶背驰", signals_all=[
-                      # Signal('30分钟_倒1K_MACD背驰辅助_顶部_任意_任意_0'),
-                      Signal('30分钟_红柱子_背驰_红柱子_是_任意_0'),
-                  ]),
-
-                  Factor(name="持有资金", signals_all=[
-                      # Signal('30分钟_倒1K_MACD背驰辅助_其他_任意_任意_0'),
-                      Signal('30分钟_绿柱子_背驰_绿柱子_否_任意_0'),
-                      Signal('30分钟_红柱子_背驰_红柱子_否_任意_0'),
-                  ]),
+        Event(name="平多", operate=Operate.LE, factors=[
+              Factor(name="⽇线⼀卖", signals_all=[
+                  Signal('⽇线_55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
+                  Signal('⽇线_近30根K线DEA_处于0轴以上_是_任意_任意_0'),
+                  Signal('⽇线_近30根K线DIF_回抽0轴_是_任意_任意_0'),
+              ], signals_any=[
+                  Signal('⽇线_死叉⾯积_背驰_是_任意_任意_0'),
+                  Signal('⽇线_死叉快线_背驰_是_任意_任意_0'),
               ]),
+              Factor(name="三买破坏", signals_all=[
+                  Signal('⽇线_K线价格_冲⾼回落_中枢之内_任意_任意_0')]),
+              Factor(name="⽌损5%", signals_all=[
+                  Signal("多头_亏损_超500BP_是_任意_任意_0")]),
+              Factor(name="最⼤回撤20%", signals_all=[
+                  Signal("多头_回撤_超2000BP_是_任意_任意_0")]),
+                  ]),
     ]
 
     tactic = {
         "base_freq": '15分钟',
-        "freqs": ['30分钟', '日线', '周线'],
+        "freqs": ['日线'],
         "get_signals": get_signals,
+        "signals_n": 0,
         "long_pos": long_pos,
         "long_events": long_events,
         "short_pos": None,
@@ -464,7 +542,7 @@ dc = TsDataCache(r"D:\ts_data")
 symbols = get_symbols(dc, 'train')
 
 # 执行结果路径
-results_path = r"D:\ts_data\three_buy"
+results_path = r"D:\ts_data\macd_3bs"
 
 # 策略回放参数设置【可选】
 # 300498.SZ#E 温氏股份, 002234.SZ#E 民和股份 300438.SZ#E 鹏辉能源
