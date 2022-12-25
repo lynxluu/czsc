@@ -67,9 +67,9 @@ def tas_dea_cross_V221106(c: CZSC, di=55) -> OrderedDict:
     连续三根macd柱子值依次增大，向上；反之，向下
 
     信号列表：
-    - Signal('15分钟_近55根K线DEA_上穿0轴_1次_任意_任意_0')
-    - Signal('15分钟_近55根K线DEA_处于0轴以上_是_任意_任意_0')
-    - Signal('15分钟_近55根K线DEA_处于0轴以下_是_任意_任意_0')
+    - Signal('15分钟_倒55根K线DEA_上穿0轴_1次_任意_任意_0')
+    - Signal('15分钟_倒55根K线DEA_处于0轴以上_是_任意_任意_0')
+    - Signal('15分钟_倒55根K线DEA_处于0轴以下_是_任意_任意_0')
 
     :param c: CZSC对象
     :param di: 连续倒3根K线
@@ -79,9 +79,9 @@ def tas_dea_cross_V221106(c: CZSC, di=55) -> OrderedDict:
     s = OrderedDict()
 
     default_signals = [
-        Signal(k1=str(c.freq.value), k2=f"近{di}根K线DEA", k3="上穿0轴", v1="其他", v2='其他', v3='其他'),
-        Signal(k1=str(c.freq.value), k2=f"近{di}根K线DEA", k3="处于0轴以上", v1="其他", v2='其他', v3='其他'),
-        Signal(k1=str(c.freq.value), k2=f"近{di}根K线DEA", k3="处于0轴以下", v1="其他", v2='其他', v3='其他')
+        Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DEA", k3="上穿0轴", v1="其他", v2='其他', v3='其他'),
+        Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DEA", k3="处于0轴以上", v1="其他", v2='其他', v3='其他'),
+        Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DEA", k3="处于0轴以下", v1="其他", v2='其他', v3='其他')
     ]
 
     for signal in default_signals:
@@ -95,15 +95,15 @@ def tas_dea_cross_V221106(c: CZSC, di=55) -> OrderedDict:
 
     # 上穿一次0轴，最后一根K线的DEA在0轴上，倒数第5根K线DEA在0轴下?
     if up == 1 and down == 0 and dea[-1] > 0:
-        v = Signal(k1=str(c.freq.value), k2=f"近{di}根K线DEA", k3="上穿0轴", v1=f"1次")
+        v = Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DEA", k3="上穿0轴", v1=f"1次")
         s[v.key] = v.value
 
     # 上穿一次或始终处于0轴上方，最近X根K线macd均处于0轴上方
     if up == down == 0 and dea[-di] > 0:
-        v = Signal(k1=str(c.freq.value), k2=f"近{di}根K线DEA", k3="处于0轴以上", v1=f"是")
+        v = Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DEA", k3="处于0轴以上", v1=f"是")
         s[v.key] = v.value
     elif up == down == 0 and dea[-di] < 0:
-        v = Signal(k1=str(c.freq.value), k2=f"近{di}根K线DEA", k3="处于0轴以下", v1=f"是")
+        v = Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DEA", k3="处于0轴以下", v1=f"是")
         s[v.key] = v.value
 
     return s
@@ -116,8 +116,8 @@ def tas_dif_zero_V221106(c: CZSC, di=55) -> OrderedDict:
     2.其次连续di根k线形成的dif最低点在 +—dif最大值0.2倍之间，在此期间判断为上涨过程中回抽0轴
 
     信号列表：
-    - Signal('15分钟_近55根K线DIF_回抽0轴_否_任意_任意_0')
-    - Signal('15分钟_近55根K线DIF_回抽0轴_是_任意_任意_0')
+    - Signal('15分钟_倒55根K线DIF_回抽0轴_否_任意_任意_0')
+    - Signal('15分钟_倒55根K线DIF_回抽0轴_是_任意_任意_0')
 
     :param c: CZSC对象
     :param di: 连续倒di根K线
@@ -129,9 +129,9 @@ def tas_dif_zero_V221106(c: CZSC, di=55) -> OrderedDict:
 
     # 近di根K线的dif的最小值，在正负0.2*dif最大值区间内，即回抽0轴
     if - max(dif) * 0.2 < min(dif) < max(dif) * 0.2:
-        v = Signal(k1=str(c.freq.value), k2=f"近{di}根K线DIF", k3="回抽0轴", v1=f"是")
+        v = Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DIF", k3="回抽0轴", v1=f"是")
     else:
-        v = Signal(k1=str(c.freq.value), k2=f"近{di}根K线DIF", k3="回抽0轴", v1=f"否")
+        v = Signal(k1=str(c.freq.value), k2=f"倒{di}根K线DIF", k3="回抽0轴", v1=f"否")
     s[v.key] = v.value
     return s
 
@@ -433,12 +433,39 @@ def tas_macd_cross_cnt_div(c: CZSC, di: int = 55, dcnt: int = 4 ) -> OrderedDict
 
     return s
 
+def tas_macd_dir(c: CZSC, di: int=3):
+    # 最近3根 MACD ⽅向信号
+    s = OrderedDict()
+    freq: Freq = c.freq
 
+    default_signals = [
+        Signal(k1=str(c.freq.value), k2=f"倒{di}K", k3="MACD背驰辅助", v1="底部", v2='其他', v3='其他'),
+        Signal(k1=str(c.freq.value), k2=f"倒{di}K", k3="MACD背驰辅助", v1="顶部", v2='其他', v3='其他'),
+        Signal(k1=str(c.freq.value), k2=f"倒{di}K", k3="MACD背驰辅助", v1="其他", v2='其他', v3='其他')
+    ]
+
+    k1, k2, k3 = str(c.freq.value), f"D{di}K", "MACD背驰辅助"
+
+    bars = get_sub_elements(c.bars_raw, di=1, n=10)
+    macd = [bar.cache['MACD']['macd'] for bar in bars]
+
+    if macd[-1] > macd[-2] > macd[-3]:
+        v = Signal(k1=str(freq.value), k2='倒3K', k3='MACD⽅向', v1='向上')
+    elif macd[-1] < macd[-2] < macd[-3]:
+        v = Signal(k1=str(freq.value), k2='倒3K', k3='MACD⽅向', v1='向下')
+    else:
+        v = Signal(k1=str(freq.value), k2='倒3K', k3='MACD⽅向', v1='模糊')
+    s[v.key] = v.value
+
+    return s
 # 定义择时交易策略，策略函数名称必须是 trader_strategy
 # ----------------------------------------------------------------------------------------------------------------------
 
 def trader_strategy(symbol):
-    """60分钟MACD择时"""
+    """马鸣三买择时"""
+
+    # 定义交易周期
+    freq: Freq = '60分钟'
 
     def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
@@ -448,40 +475,34 @@ def trader_strategy(symbol):
         s.update(signals.bar_zdt_V221110(cat.kas['15分钟'], di=1))
 
 
+        # 周期用日线
         # 更新macd缓存
-        signals.update_macd_cache(cat.kas['日线'])
+        signals.update_macd_cache(cat.kas[freq])
         # macd变色次数
-        signals.update(tas_macd_cross_cnt_div(cat.kas['日线'], di=55, dcnt=4))
+        s.update(tas_macd_cross_cnt_div(cat.kas[freq]))
         # dea上穿0轴
-        signals.update(tas_dea_cross_V221106(cat.kas['日线'],di=55))
+        s.update(tas_dea_cross_V221106(cat.kas[freq]))
+        s.update(tas_dea_cross_V221106(cat.kas[freq],di=30))
         # s.update(get_macd_third_buy(cat.kas['日线']))
+        # dif回抽0轴
+        s.update(tas_dif_zero_V221106(cat.kas[freq],di=30))
+        # 突破中枢
+        s.update(tas_macd_zs_v221106(cat.kas[freq]))
         # macd面积背驰
-        signals.update(tas_macd_area_compare_V221106(cat.kas['日线'],di=55))
-
+        s.update(tas_macd_area_compare_V221106(cat.kas[freq]))
+        # macd方向
+        s.update(tas_macd_dir(cat.kas[freq]))
 
         # 止损止盈
         s.update(signals.pos.get_s_long01(cat, th=500))                  # 亏损5个点止损
         s.update(signals.pos.get_s_long02(cat, th=2000))                 # 回撤20个点止盈
 
         # 更新多周期macd缓存
-        for _, c in cat.kas.items():
-            if c.freq == Freq.D:
-                # s.update(get_macd_third_buy(c))
-        return s
+        # for _, c in cat.kas.items():
+        #     if c.freq == Freq.D:
+        #         s.update(get_macd_third_buy(c))
+        # return s
 
-        # signals.update_macd_cache(cat.kas['30分钟'])
-        # # s.update(tas_macd_bc_V221108(cat.kas['30分钟']), di=1)
-        # s.update(tas_macd_area_compare_V221106(cat.kas['30分钟']), di=55)
-        # # s.update(tas_dif_zero_V221106(cat.kas['30分钟']), di=55)
-        # # s.update(tas_dea_cross_V221106(cat.kas['30分钟']), di=55)
-        # s.update(tas_macd_zs_v221106(cat.kas['30分钟']), di=55)
-        #
-        # signals.update_macd_cache(cat.kas['日线'])
-        # s.update(signals.tas.tas_macd_power_V221108(cat.kas['日线'], di=1))
-        #
-        # signals.update_macd_cache(cat.kas['周线'])
-        # s.update(signals.tas.tas_macd_power_V221108(cat.kas['周线'], di=1))
-        # s.update(signals.tas_macd_base_V221028(cat.kas['周线'], di=1, key='macd'))
         return s
 
     # 定义多头持仓对象和交易事件
@@ -489,29 +510,30 @@ def trader_strategy(symbol):
 
     long_events = [
         Event(name="开多", operate=Operate.LO, factors=[
-            Factor(name="⽇线三买", signals_all=[
-                Signal('⽇线_55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
-                Signal('⽇线_55根K线DEA_上穿0轴次数_1次_任意_任意_0'),
-                # Signal('⽇线_⾦叉⾯积_背驰_是_任意_任意_0'),
-                Signal('⽇线_红柱子_背驰_红柱子_是_任意_0'),
-                Signal('⽇线_K线价格_冲⾼回落_中枢之上_任意_任意_0')
+            Factor(name=f"{freq}三买", signals_all=[
+                Signal(f'{freq}_倒55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
+                Signal(f'{freq}_倒55根K线DEA_上穿0轴_1次_任意_任意_0'),
+                # Signal('日线_⾦叉⾯积_背驰_是_任意_任意_0'),
+                Signal(f'{freq}_红柱子_背驰_红柱子_是_任意_0'),
+                Signal(f'{freq}_K线价格_冲高回落_中枢之上_任意_任意_0')
             ], signals_any=[
-                Signal('⽇线_倒3K_MACD⽅向_向下_任意_任意_0'),
-                Signal('⽇线_倒3K_MACD⽅向_模糊_任意_任意_0'),
+                Signal(f'{freq}_倒3K_MACD⽅向_向下_任意_任意_0'),
+                Signal(f'{freq}_倒3K_MACD⽅向_模糊_任意_任意_0'),
             ]),
         ]),
 
         Event(name="平多", operate=Operate.LE, factors=[
-              Factor(name="⽇线⼀卖", signals_all=[
-                  Signal('⽇线_55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
-                  Signal('⽇线_近30根K线DEA_处于0轴以上_是_任意_任意_0'),
-                  Signal('⽇线_近30根K线DIF_回抽0轴_是_任意_任意_0'),
+              Factor(name=f"{freq}⼀卖", signals_all=[
+                  Signal(f'{freq}_倒55根K线MACD_与0轴交叉次数_4次以上_任意_任意_0'),
+                  Signal(f'{freq}_倒30根K线DEA_处于0轴以上_是_任意_任意_0'),
+                  Signal(f'{freq}_倒30根K线DIF_回抽0轴_是_任意_任意_0'),
               ], signals_any=[
-                  Signal('⽇线_死叉⾯积_背驰_是_任意_任意_0'),
-                  Signal('⽇线_死叉快线_背驰_是_任意_任意_0'),
+                  # Signal('日线_死叉⾯积_背驰_是_任意_任意_0'),
+                  # Signal('日线_死叉快线_背驰_是_任意_任意_0'),
+                  Signal(f'{freq}_绿柱子_背驰_绿柱子_是_任意_0'),
               ]),
               Factor(name="三买破坏", signals_all=[
-                  Signal('⽇线_K线价格_冲⾼回落_中枢之内_任意_任意_0')]),
+                  Signal(f'{freq}_K线价格_冲高回落_中枢之内_任意_任意_0')]),
               Factor(name="⽌损5%", signals_all=[
                   Signal("多头_亏损_超500BP_是_任意_任意_0")]),
               Factor(name="最⼤回撤20%", signals_all=[
@@ -521,7 +543,7 @@ def trader_strategy(symbol):
 
     tactic = {
         "base_freq": '15分钟',
-        "freqs": ['日线'],
+        "freqs": [freq],
         "get_signals": get_signals,
         "signals_n": 0,
         "long_pos": long_pos,
@@ -547,9 +569,9 @@ results_path = r"D:\ts_data\macd_3bs"
 # 策略回放参数设置【可选】
 # 300498.SZ#E 温氏股份, 002234.SZ#E 民和股份 300438.SZ#E 鹏辉能源
 replay_params = {
-    "symbol": "300438.SZ#E",  # 回放交易品种
-    # "symbol": "000001.SZ#E",  # 回放交易品种
+    # "symbol": "002234.SZ#E",  # 回放交易品种
+    "symbol": "000001.SZ#E",  # 回放交易品种
     "sdt": "20150101",  # K线数据开始时间
-    "mdt": "20210101",  # 策略回放开始时间
+    "mdt": "20160101",  # 策略回放开始时间
     "edt": "20221214",  # 策略回放结束时间
 }
