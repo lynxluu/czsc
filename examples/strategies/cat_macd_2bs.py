@@ -31,6 +31,7 @@ def macd_bs2_v2(cat: CzscAdvancedTrader, freq: str):
         Signal('15分钟_MACD_BS2V2_二买_任意_任意_0')
     :return:
     """
+
     s = OrderedDict()
     cache_key = f"{freq}MACD"
     cache = cat.cache[cache_key]
@@ -64,20 +65,27 @@ def macd_bs2_v2(cat: CzscAdvancedTrader, freq: str):
 def trader_strategy(symbol):
     """择时策略"""
 
+    # 定义交易周期
+    freq: Freq = '60分钟'
+
     def get_signals(cat: CzscAdvancedTrader) -> OrderedDict:
         s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
 
         s.update(signals.bar_operate_span_V221111(cat.kas['15分钟'], k1='交易', span=('0935', '1450')))
         signals.update_macd_cache(cat.kas['15分钟'])
         s.update(signals.bar_zdt_V221110(cat.kas['15分钟'], di=1))
-        s.update(tas_macd_second_bs_V221201(cat.kas['15分钟'], di=1))
 
-        # signals.update_macd_cache(cat.kas['日线'])
-        # s.update(signals.tas.tas_macd_power_V221108(cat.kas['日线'], di=1))
-        #
-        # signals.update_macd_cache(cat.kas['周线'])
-        # s.update(signals.tas.tas_macd_power_V221108(cat.kas['周线'], di=1))
-        # s.update(signals.tas_macd_base_V221028(cat.kas['周线'], di=1, key='macd'))
+        signals.update_macd_cache(cat.kas[freq])
+        s.update(tas_macd_second_bs_V221201(cat.kas[freq], di=1))
+        # s.update(macd_bs2_v2(cat.kas['15分钟'], freq='15分钟'))
+
+
+        signals.update_macd_cache(cat.kas['日线'])
+        s.update(signals.tas.tas_macd_power_V221108(cat.kas['日线'], di=1))
+
+        signals.update_macd_cache(cat.kas['周线'])
+        s.update(signals.tas.tas_macd_power_V221108(cat.kas['周线'], di=1))
+        s.update(signals.tas_macd_base_V221028(cat.kas['周线'], di=1, key='macd'))
         return s
 
     # 定义多头持仓对象和交易事件
@@ -85,14 +93,19 @@ def trader_strategy(symbol):
 
     long_events = [
         Event(name="开多", operate=Operate.LO, factors=[
-            Factor(name="低吸", signals_all=[
+            Factor(name="低吸",
+                   signals_all=[
                 Signal("交易_0935_1450_是_任意_任意_0"),
-                Signal('15分钟_D1MACD_BS2_二卖_金叉_任意_0'),
-            ], signals_not=[
+                # Signal('15分钟_MACD_BS2V2_二买_任意_任意_0'),
+            ],
+                   signals_any=[
+                Signal(f'{freq}_D1MACD_BS2_二买_金叉_任意_0'),
+                Signal(f'{freq}_D1MACD_BS2_二买_死叉_任意_0'),],
+                   signals_not=[
                 Signal("15分钟_D1K_ZDT_涨停_任意_任意_0"),
-                # Signal("日线_D1K_MACD强弱_超强_任意_任意_0"),
-                # Signal("周线_D1K_MACD强弱_超强_任意_任意_0"),
-                # Signal("周线_D1K_MACD_任意_向上_任意_0"),
+                Signal("日线_D1K_MACD强弱_超强_任意_任意_0"),
+                Signal("周线_D1K_MACD强弱_超强_任意_任意_0"),
+                Signal("周线_D1K_MACD_任意_向上_任意_0"),
             ]),
         ]),
 
@@ -103,7 +116,9 @@ def trader_strategy(symbol):
               ],
               factors=[
                   Factor(name="15分钟顶背驰", signals_all=[
-                      Signal('15分钟_D1MACD_BS2_二买_死叉_任意_0'),
+                      # Signal('15分钟_MACD_BS2V2_二卖_任意_任意_0'),
+                      Signal(f'{freq}_D1MACD_BS2_二卖_金叉_任意_0'),
+                      Signal(f'{freq}_D1MACD_BS2_二卖_死叉_任意_0')
                   ]),
               ]),
     ]
