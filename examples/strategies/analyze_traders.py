@@ -61,7 +61,7 @@ class DummyTradersPerformance:
         return df
 
 
-tp = DummyTradersPerformance(r"D:\ts_data\f60_macd_zb\DEXP202212211326\*E.cdt")
+tp = DummyTradersPerformance(r"D:\ts_data\f60_macd_zb\DEXP202301012209\*E.cdt")
 
 pairs = tp.get_pairs('20150101', '20221201')
 ppf = PairsPerformance(pairs)
