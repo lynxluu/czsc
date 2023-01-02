@@ -561,10 +561,19 @@ def trader_strategy(symbol):
 dc = TsDataCache(r"D:\ts_data")
 
 # 定义回测使用的标的列表
-symbols = get_symbols(dc, 'train')
+symbols = get_symbols(dc, 'etfs')
 
 # 执行结果路径
 results_path = r"D:\ts_data\macd_3bs"
+
+# 【必须】策略回测参数设置
+dummy_params = {
+    "symbols": get_symbols(dc, 'etfs'),  # 回测使用的标的列表
+    "sdt": "20150101",  # K线数据开始时间
+    "mdt": "20200101",  # 策略回测开始时间
+    "edt": "20221231",  # 策略回测结束时间
+}
+
 
 # 策略回放参数设置【可选】
 # 300498.SZ#E 温氏股份, 002234.SZ#E 民和股份 300438.SZ#E 鹏辉能源
