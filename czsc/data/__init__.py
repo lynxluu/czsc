@@ -25,6 +25,8 @@ def get_symbols(dc: TsDataCache, step):
                   '399001.SZ', '399006.SZ', '399376.SZ', '399377.SZ', '399317.SZ', '399303.SZ'],
         "stock": stocks.ts_code.to_list(),
         "check": ['000001.SZ'],
+        "train20": stocks_[:20],
+        "train50": stocks_[:50],
         "train": stocks_[:200],
         "valid": stocks_[200:600],
         "etfs": ['512880.SH', '518880.SH', '515880.SH', '513050.SH', '512690.SH',
