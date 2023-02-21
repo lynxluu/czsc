@@ -30,10 +30,42 @@ bars = dc.pro_bar_minutes(ts_code=symbol, asset='E', freq='15min',
                           sdt='20181101', edt='20210101', adj='qfq', raw_bar=True)
 
 
+def bar_big_solid_V230215(c: CZSC, di: int = 1, n: int = 20, **kwargs):
+    """窗口内最大实体K线的中间价区分多空
+
+    **信号逻辑：**
+
+    1. 找到窗口内最大实体K线, 据其中间位置区分多空
+
+    **信号列表：**
+
+    - Signal('日线_D1N10_MID_看空_大阳_任意_0')
+    - Signal('日线_D1N10_MID_看空_大阴_任意_0')
+    - Signal('日线_D1N10_MID_看多_大阴_任意_0')
+    - Signal('日线_D1N10_MID_看多_大阳_任意_0')
+
+    :param c: CZSC 对象
+    :param di: 倒数第i根K线
+    :param n: 窗口大小
+    :return: 信号字典
+    """
+    k1, k2, k3 = f"{c.freq.value}_D{di}N{n}_MID".split('_')
+    _bars = get_sub_elements(c.bars_raw, di=di, n=n)
+
+    # 找到窗口内最大实体K线
+    max_i = np.argmax([x.solid for x in _bars])
+    max_solid_bar = _bars[max_i]
+    max_solid_mid = min(max_solid_bar.open, max_solid_bar.close) + 0.5 * max_solid_bar.solid
+
+    v1 = '看多' if c.bars_raw[-1].close > max_solid_mid else '看空'
+    v2 = '大阳' if max_solid_bar.close > max_solid_bar.open else '大阴'
+    return create_single_signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2)
+
+
 def get_signals(cat: CzscTrader) -> OrderedDict:
     s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
     # 使用缓存来更新信号的方法
-    s.update(signals.tas_macd_first_bs_V221216(cat.kas['日线'], di=1))
+    s.update(bar_big_solid_V230215(cat.kas['日线'], di=1, n=10))
     return s
 
 

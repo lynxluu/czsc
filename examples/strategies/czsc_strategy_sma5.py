@@ -2,22 +2,15 @@
 """
 author: zengbin93
 email: zeng_bin8888@163.com
-create_dt: 2022/10/21 19:56
-describe: 择时交易策略样例
+create_dt: 2023/2/2 18:30
+describe: 
 """
-from loguru import logger
-from czsc.data import TsDataCache, get_symbols
 from czsc import signals
 from collections import OrderedDict
 from czsc.objects import Event, Position
 from czsc.strategies import CzscStrategyBase
 
 
-logger.disable('czsc.signals.cxt')
-
-
-# 定义择时交易策略，策略函数名称必须是 trader_strategy
-# ----------------------------------------------------------------------------------------------------------------------
 class CzscStrategySMA5(CzscStrategyBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -102,54 +95,3 @@ class CzscStrategySMA5(CzscStrategyBase):
                        exits=[Event.load(x) for x in exits],
                        interval=3600*4, timeout=100, stop_loss=1000, T0=False)
         return pos
-
-
-# 定义命令行接口的特定参数
-# ----------------------------------------------------------------------------------------------------------------------
-
-# 【必须】执行结果路径
-results_path = r"D:\ts_data\TS_SMA5"
-
-# 初始化 Tushare 数据缓存
-dc = TsDataCache(r"D:\ts_data")
-
-# 【必须】策略回测参数设置
-dummy_params = {
-    "symbols": get_symbols(dc, 'train'),  # 回测使用的标的列表
-    "sdt": "20150101",  # K线数据开始时间
-    "mdt": "20200101",  # 策略回测开始时间
-    "edt": "20220101",  # 策略回测结束时间
-}
-
-
-# 【可选】策略回放参数设置
-replay_params = {
-    "symbol": "000002.SZ#E",  # 回放交易品种
-    "sdt": "20150101",  # K线数据开始时间
-    "mdt": "20200101",  # 策略回放开始时间
-    "edt": "20220101",  # 策略回放结束时间
-}
-
-
-# 【必须】定义K线数据读取函数，这里是为了方便接入任意数据源的K线行情
-# ----------------------------------------------------------------------------------------------------------------------
-
-def read_bars(symbol, sdt, edt):
-    """自定义K线数据读取函数，便于接入任意来源的行情数据进行回测一类的分析
-
-    :param symbol: 标的名称
-    :param sdt: 行情开始时间
-    :param edt: 行情介绍时间
-    :return: list of RawBar
-    """
-    adj = 'hfq'
-    freq = '15min'
-    ts_code, asset = symbol.split("#")
-
-    if "min" in freq:
-        bars = dc.pro_bar_minutes(ts_code, sdt, edt, freq=freq, asset=asset, adj=adj, raw_bar=True)
-    else:
-        bars = dc.pro_bar(ts_code, sdt, edt, freq=freq, asset=asset, adj=adj, raw_bar=True)
-    return bars
-
-

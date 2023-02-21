@@ -6,8 +6,6 @@ create_dt: 2021/6/25 18:52
 """
 import time
 import json
-
-import numpy as np
 import requests
 import pandas as pd
 import tushare as ts
@@ -16,7 +14,7 @@ from datetime import datetime
 from typing import List
 from functools import partial
 from loguru import logger
-
+from tenacity import retry, stop_after_attempt, wait_random
 from czsc.objects import RawBar, Freq
 
 
@@ -44,6 +42,7 @@ class TushareProApi:
         self.__token = token
         self.__timeout = timeout
 
+    @retry(stop=stop_after_attempt(10), wait=wait_random(1, 5))
     def query(self, api_name, fields='', **kwargs):
         if api_name in ['__getstate__', '__setstate__']:
             return pd.DataFrame()
@@ -90,12 +89,10 @@ def format_kline(kline: pd.DataFrame, freq: Freq) -> List[RawBar]:
     bars = []
     dt_key = 'trade_time' if '分钟' in freq.value else 'trade_date'
     kline = kline.sort_values(dt_key, ascending=True, ignore_index=True)
-    kline['vol'] = kline['vol'].fillna(0)   # 处理nan值
     records = kline.to_dict('records')
 
     for i, record in enumerate(records):
         if freq == Freq.D:
-            # vol = 0 if record['vol'] == np.nan else int(record['vol']*100)    # 处理nan值，无用
             vol = int(record['vol']*100)
             amount = int(record.get('amount', 0)*1000)
         else:
@@ -103,7 +100,7 @@ def format_kline(kline: pd.DataFrame, freq: Freq) -> List[RawBar]:
             amount = int(record.get('amount', 0))
 
         # 将每一根K线转换成 RawBar 对象
-        bar = RawBar(symbol=record['ts_code'], dt=pd.to_datetime(record[dt_key], format='%Y%m%d', errors='coerce'),
+        bar = RawBar(symbol=record['ts_code'], dt=pd.to_datetime(record[dt_key]),
                      id=i, freq=freq, open=record['open'], close=record['close'],
                      high=record['high'], low=record['low'],
                      vol=vol,          # 成交量，单位：股
