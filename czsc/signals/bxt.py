@@ -145,8 +145,9 @@ def check_five_bi(bis: List[Union[BI, FakeBI]], freq: Freq, di: int = 1) -> Sign
 
     return v
 
+
 def check_six_bi(bis: List[Union[BI, FakeBI]], freq: Freq, di: int = 1) -> Signal:
-    """识别七笔形态
+    """识别六笔形态
 
     :param freq: K线周期，也可以称为级别
     :param bis: 由远及近的六笔
