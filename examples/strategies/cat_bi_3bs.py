@@ -142,26 +142,30 @@ def trader_strategy(symbol):
 dc = TsDataCache(r"D:\ts_data")
 
 # 定义回测使用的标的列表
-# symbols = get_symbols(dc, 'train')
+# 300498.SZ#E 温氏股份, 002234.SZ#E 民和股份 300438.SZ#E 鹏辉能源
+symbol = '002234.SZ'
+symbols = get_symbols(dc, 'train')
+sdt = "20150101"
+mdt = "20200101"
+edt = "20221231"
+
 
 # 执行结果路径
 results_path = r"D:\ts_data\bi_3bs"
 
 # 【必须】策略回测参数设置
 dummy_params = {
-    "symbols": get_symbols(dc, 'train20'),  # 回测使用的标的列表
-    "sdt": "20150101",  # K线数据开始时间
-    "mdt": "20200101",  # 策略回测开始时间
-    "edt": "20221231",  # 策略回测结束时间
+    "symbols": symbols,  # 回测使用的标的列表
+    "sdt": sdt,  # K线数据开始时间
+    "mdt": mdt,  # 策略回测开始时间
+    "edt": edt,  # 策略回测结束时间
 }
 
 
 # 策略回放参数设置【可选】
-# 300498.SZ#E 温氏股份, 002234.SZ#E 民和股份 300438.SZ#E 鹏辉能源
 replay_params = {
-    "symbol": "002234.SZ#E",  # 回放交易品种
-    # "symbol": "000001.SZ#E",  # 回放交易品种
-    "sdt": "20150101",  # K线数据开始时间
-    "mdt": "20160101",  # 策略回放开始时间
-    "edt": "20221214",  # 策略回放结束时间
+    "symbol": symbol,  # 回放交易品种
+    "sdt": sdt,  # K线数据开始时间
+    "mdt": mdt,  # 策略回放开始时间
+    "edt": edt,  # 策略回放结束时间
 }

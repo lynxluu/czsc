@@ -1,5 +1,9 @@
 import sys
 
+import pandas as pd
+
+from czsc.data import freq_cn2ts
+
 sys.path.insert(0, '..')
 import os
 import numpy as np
@@ -7,22 +11,12 @@ from loguru import logger
 from collections import OrderedDict
 from czsc.data.ts_cache import TsDataCache
 from czsc import CZSC, Signal
-from czsc.objects import Mark
+from czsc.objects import Mark, Freq, Operate, Signal, Factor, Event, Position
 from czsc.traders.base import CzscTrader, check_signals_acc
 from czsc.signals.tas import update_ma_cache
-from czsc.utils import get_sub_elements, create_single_signal
+from czsc.utils import get_sub_elements, create_single_signal, BarGenerator
 from czsc import signals
 from czsc.enum import Mark, Direction
-
-
-os.environ['czsc_verbose'] = '1'
-
-data_path = r'D:\ts_data'
-dc = TsDataCache(data_path, sdt='2010-01-01', edt='20211209')
-
-symbol = '000001.SZ'
-bars = dc.pro_bar_minutes(ts_code=symbol, asset='E', freq='15min',
-                          sdt='20181101', edt='20210101', adj='qfq', raw_bar=True)
 
 
 def cxt_third_buy_V230228(c: CZSC, di=1, **kwargs) -> OrderedDict:
@@ -93,7 +87,6 @@ def cxt_third_buy_V230228(c: CZSC, di=1, **kwargs) -> OrderedDict:
 
     return create_single_signal(k1=k1, k2=k2, k3=k3, v1=v1, v2=v2)
 
-
 def get_signals(cat: CzscTrader) -> OrderedDict:
     s = OrderedDict({"symbol": cat.symbol, "dt": cat.end_dt, "close": cat.latest_price})
     # 使用缓存来更新信号的方法
@@ -101,5 +94,36 @@ def get_signals(cat: CzscTrader) -> OrderedDict:
     return s
 
 
+
+# os.environ['czsc_verbose'] = '1'
+
+# data_path 是 TS_CACHE 缓存数据文件夹所在目录
+dc = TsDataCache(data_path=r"D:\ts_data\share", refresh=False, sdt="20120101", edt="20221001")
+
+sdt = '20181101'
+mdt = '20220101'
+edt = '20230306'
+
+symbol = '002234.SZ'
+
+# 获取单个品种的基础周期K线
+bars = dc.pro_bar_minutes(ts_code=symbol, asset='E', freq='15min',
+                          sdt=sdt, edt=edt, adj='qfq', raw_bar=True)
+
+# 设置回放快照文件保存目录
+res_path = r"D:\ts_data\replay_cxt3_v2"
+
+
+# 拆分基础周期K线，一部分用来初始化BarGenerator，随后的K线是回放区间
+start_date = pd.to_datetime(mdt)
+bg = BarGenerator('15分钟', freqs=['日线','周线'], max_count=500)
+bars1 = [x for x in bars if x.dt <= start_date]
+bars2 = [x for x in bars if x.dt > start_date]
+for bar in bars1:
+    bg.update(bar)
+
+
 if __name__ == '__main__':
-    check_signals_acc(bars, get_signals)
+    check_signals_acc(bars2, get_signals)
+    # trade_replay(bg, bars2, trader_strategy, res_path)
+    # signals.utils.check_cross_info()
