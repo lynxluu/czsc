@@ -10,7 +10,7 @@ from collections import OrderedDict
 from czsc import CZSC, signals,traders
 from czsc.data import TsDataCache, get_symbols
 from czsc.objects import Freq, Operate, Signal, Factor, Event
-from czsc.traders import CzscAdvancedTrader
+from czsc.traders import CzscAdvancedTrader,CzscTrader
 from czsc.objects import PositionLong, PositionShort, RawBar
 from czsc.utils import get_sub_elements
 from czsc.signals.utils import down_cross_count,check_cross_info

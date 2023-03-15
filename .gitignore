@@ -110,3 +110,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 df
+examples/lynx/prepare_data.py
