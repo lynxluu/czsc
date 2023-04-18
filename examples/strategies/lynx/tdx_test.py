@@ -6,22 +6,27 @@ import pandas as pd
 # print(data
 # https://www.cursor.so/ 生成代码
 
-from pytdx.hq import TdxHq_API
-from pytdx.params import TDXParams
+from pytdx.hq import *
+from pytdx.params import *
+# from pytdx.hq import TdxHq_API
+# from pytdx.params import TDXParams
 
 from czsc.data import TsDataCache
+
+
+
 
 api = TdxHq_API()
 api.connect('218.75.126.9', 7709)
 
-data = api.get_security_bars(TDXParams.KLINE_TYPE_15MIN, TDXParams.MARKET_SH, '600328', 0, 246)
+data = api.get_security_bars(TDXParams.KLINE_TYPE_15MIN, TDXParams.MARKET_SH, '600328', 0, 500)
 # print(data[0])
 
 pro_bar_minutes = []
 for bar in data:
     bar_minutes = {
-        'ts_code': '600328.SH',
-        'trade_time': pd.to_datetime(bar['datetime'], format='%Y-%m-%d %H:%M:%S'),
+        'symbol': '600328.SH',
+        'dt': pd.to_datetime(bar['datetime'], format='%Y-%m-%d %H:%M:%S'),
         'high': bar['high'],
         'low': bar['low'],
         'close': bar['close'],
