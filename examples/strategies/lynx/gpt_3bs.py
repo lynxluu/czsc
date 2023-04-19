@@ -7,6 +7,8 @@ from pytdx.params import *
 from pytdx.reader import *
 import pandas as pd
 
+from czsc import Direction, NewBar, RawBar
+
 
 # 使用PyTDx获取上证指数的最新250根日线数据
 def read_ol():
@@ -24,17 +26,63 @@ def read_ol():
 def read_file():
     path = r'D:\app_dev\tdx\vipdoc\sh\lday\sh000001.day'
     api = TdxDailyBarReader()
-    klines = api.get_df_by_file(path)[-250:]
+    df = api.get_df_by_file(path)[-250:]
 
-    return klines
+    return df
 
 
 
 # df = read_ol()
 df = read_file()
-# print(df)
+print(df)
 # print(df[:10])
 # print(df[240:])
+
+def hb_kline(klines: pd.DataFrame) -> pd.DataFrame:
+    new_klines = []
+
+
+def remove_include(k1: NewBar, k2: NewBar, k3: RawBar):
+    """去除包含关系：输入三根k线，其中k1和k2为没有包含关系的K线，k3为原始K线"""
+    if k1.high < k2.high:
+        direction = Direction.Up
+    elif k1.high > k2.high:
+        direction = Direction.Down
+    else:
+        k4 = NewBar(symbol=k3.symbol, id=k3.id, freq=k3.freq, dt=k3.dt, open=k3.open,
+                    close=k3.close, high=k3.high, low=k3.low, vol=k3.vol, elements=[k3])
+        return False, k4
+
+    # 判断 k2 和 k3 之间是否存在包含关系，有则处理
+    if (k2.high <= k3.high and k2.low >= k3.low) or (k2.high >= k3.high and k2.low <= k3.low):
+        if direction == Direction.Up:
+            high = max(k2.high, k3.high)
+            low = max(k2.low, k3.low)
+            dt = k2.dt if k2.high > k3.high else k3.dt
+        elif direction == Direction.Down:
+            high = min(k2.high, k3.high)
+            low = min(k2.low, k3.low)
+            dt = k2.dt if k2.low < k3.low else k3.dt
+        else:
+            raise ValueError
+
+        if k3.open > k3.close:
+            open_ = high
+            close = low
+        else:
+            open_ = low
+            close = high
+        vol = k2.vol + k3.vol
+        # 这里有一个隐藏Bug，len(k2.elements) 在一些及其特殊的场景下会有超大的数量，具体问题还没找到；
+        # 临时解决方案是直接限定len(k2.elements)<=100
+        elements = [x for x in k2.elements[:100] if x.dt != k3.dt] + [k3]
+        k4 = NewBar(symbol=k3.symbol, id=k2.id, freq=k2.freq, dt=dt, open=open_,
+                    close=close, high=high, low=low, vol=vol, elements=elements)
+        return True, k4
+    else:
+        k4 = NewBar(symbol=k3.symbol, id=k3.id, freq=k3.freq, dt=k3.dt, open=k3.open,
+                    close=k3.close, high=k3.high, low=k3.low, vol=k3.vol, elements=[k3])
+        return False, k4
 
 # 初始化存储分型的fx数组
 fx = []
