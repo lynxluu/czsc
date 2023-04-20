@@ -30,38 +30,64 @@ def read_file():
 
     return df
 
-def format_daily_tdx(df: pd.DataFrame, ts_code: str):
+def format_daily_tdx(df: pd.DataFrame, symbol: str):
     df.rename(columns={'volume': 'vol'}, inplace=True)
-    df['ts_code'] = ts_code
+    df['symbol'] = symbol
     # 索引转换为trade_date列
-    df['trade_date'] = df.index
+    df['dt'] = df.index
+    # 获取日期类型 datetime64
+    print(df['dt'].dtypes)
+    df['freq'] = 'D'
+    # debug date列改不了名的问题,经过index=None参数发现是index是日期,把索引转换为date列 或者取消索引
+    # df.reset_index(drop=True)
+    # df.to_csv('df1.csv',header=None,index=None)
     # print(df)
-    # df.to_csv('df2.csv',header=None,index=None)
 
     # 日期转换
-    # df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y-%m-%d',errors='coerce')
+    df['dt'] = pd.to_datetime(df['dt'], format='%Y-%m-%d',errors='coerce')
 
     # 按要求排序
-    order = ['ts_code', 'trade_date', 'open', 'high', 'low', 'close','vol','amount']
+    order = ['symbol', 'dt', 'freq', 'open', 'high', 'low', 'close','vol','amount']
     df = df[order]
-
+    df = df.reset_index(drop=True)
+    df['id'] = range(len(df))
     return df
 
-# df = read_ol()
-df = read_file()
-# debug date列改不了名的问题,经过index=None参数发现是index是日期,把索引转换为date列 或者取消索引
-# df.reset_index(drop=True)
-# print(df)
-# df.to_csv('df1.csv',header=None,index=None)
-df = format_daily_tdx(df,'000001.SH')
-
-print(df[:10])
-# print(df[240:])
 
 def hb_kline(klines: pd.DataFrame) -> pd.DataFrame:
     new_klines = []
+    i=0
+    n = len(klines)
+    while n >= 3 and i<n-2:
+        k1 = klines.iloc[i]
+        k2 = klines.iloc[i+1]
+        k3 = klines.iloc[i+2]
+        # 如果k1 k2不包含，把k1、k2加入新k数组，判断kk3是否应该合并
+        if not is_contain(k1,k2):
+            new_klines.append(k1)
+            new_klines.append(k2)
+            res=remove_include(k1,k2,k3)
+            # 如何发生包含，合并后的k线加入新k数组;如果不合并，k3加入新数组
+            if res[0]:
+                new_klines.append(res[1])
+            else:
+                new_klines.append(k3)
 
+        return new_klines
 
+def is_contain(k1, k2):
+    """
+    判断两根K线k1和k2是否存在包含关系
+    """
+    # K线1的最高价大于K线2最高价且K线1最低价小于K线2最低价,则K线1包含K线2
+    if k1['high'] > k2['high'] and k1['low'] < k2['low']:
+        return True
+
+    # K线2的最高价大于K线1最高价且K线2最低价小于K线1最低价,则K线2包含K线1
+    elif k2['high'] > k1['high'] and k2['low'] < k1['low']:
+        return True
+    else:
+        return False
 def remove_include(k1: NewBar, k2: NewBar, k3: RawBar):
     """去除包含关系：输入三根k线，其中k1和k2为没有包含关系的K线，k3为原始K线"""
     if k1.high < k2.high:
@@ -104,30 +130,45 @@ def remove_include(k1: NewBar, k2: NewBar, k3: RawBar):
                     close=k3.close, high=k3.high, low=k3.low, vol=k3.vol, elements=[k3])
         return False, k4
 
+
 # 初始化存储分型的fx数组
-fx = []
+def fx():
+    fx = []
 
-# 遍历最近249根K线(从第2根开始)
-for i in range(2, len(df)-1):
-    # 获取当前K线、前一根K线和后一根K线的最高价和最低价
-    pre = df.iloc[i-1]
-    curr = df.iloc[i]
-    aft = df.iloc[i+1]
+    # 遍历最近249根K线(从第2根开始)
+    for i in range(2, len(df)-1):
+        # 获取当前K线、前一根K线和后一根K线的最高价和最低价
+        pre = df.iloc[i-1]
+        curr = df.iloc[i]
+        aft = df.iloc[i+1]
 
-    # current_high = data.loc[i, 'high']
-    # current_low = data.loc[i, 'low']
-    # pre_high = data.loc[i - 1, 'high']
-    # pre_low = data.loc[i - 1, 'low']
-    # aft_high = data.loc[i + 1, 'high']
-    # aft_low = data.loc[i + 1, 'low']
+        # current_high = data.loc[i, 'high']
+        # current_low = data.loc[i, 'low']
+        # pre_high = data.loc[i - 1, 'high']
+        # pre_low = data.loc[i - 1, 'low']
+        # aft_high = data.loc[i + 1, 'high']
+        # aft_low = data.loc[i + 1, 'low']
 
-    # 判断当前K线是否为顶分型或底分型,如果是则添加到fx数组
-    # if current_high > pre_high and current_high > aft_high:
-    #     fx.append([1,i])  # 顶分型
-    # elif current_low < pre_low and current_low < aft_low:
-    #     fx.append([0,i])  # 底分型
-    # if max(curr)
+        # 判断当前K线是否为顶分型或底分型,如果是则添加到fx数组
+        # if current_high > pre_high and current_high > aft_high:
+        #     fx.append([1,i])  # 顶分型
+        # elif current_low < pre_low and current_low < aft_low:
+        #     fx.append([0,i])  # 底分型
+        # if max(curr)
 
-    print[curr]
-# 输出fx数组
-print(fx)
+        print[curr]
+    # 输出fx数组
+    print(fx)
+
+
+
+# df = read_ol()
+df = read_file()
+df = format_daily_tdx(df,'000001.SH')
+
+# print(df[:10])
+# print(df[240:])
+print(df)
+
+dfn = hb_kline(df)
+print(dfn)
