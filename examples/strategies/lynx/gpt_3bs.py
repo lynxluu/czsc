@@ -30,12 +30,32 @@ def read_file():
 
     return df
 
+def format_daily_tdx(df: pd.DataFrame, ts_code: str):
+    df.rename(columns={'volume': 'vol'}, inplace=True)
+    df['ts_code'] = ts_code
+    # 索引转换为trade_date列
+    df['trade_date'] = df.index
+    # print(df)
+    # df.to_csv('df2.csv',header=None,index=None)
 
+    # 日期转换
+    # df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y-%m-%d',errors='coerce')
+
+    # 按要求排序
+    order = ['ts_code', 'trade_date', 'open', 'high', 'low', 'close','vol','amount']
+    df = df[order]
+
+    return df
 
 # df = read_ol()
 df = read_file()
-print(df)
-# print(df[:10])
+# debug date列改不了名的问题,经过index=None参数发现是index是日期,把索引转换为date列 或者取消索引
+# df.reset_index(drop=True)
+# print(df)
+# df.to_csv('df1.csv',header=None,index=None)
+df = format_daily_tdx(df,'000001.SH')
+
+print(df[:10])
 # print(df[240:])
 
 def hb_kline(klines: pd.DataFrame) -> pd.DataFrame:

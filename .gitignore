@@ -111,3 +111,4 @@ venv.bak/
 .mypy_cache/
 df
 examples/lynx/prepare_data.py
+*.csv
