@@ -35,22 +35,27 @@ def format_daily_tdx(df: pd.DataFrame, symbol: str):
     df['symbol'] = symbol
     # 索引转换为trade_date列
     df['dt'] = df.index
-    # 获取日期类型 datetime64
-    print(df['dt'].dtypes)
+    # 获取日期类型 datetime64,日期报错的原因是类型是int64
+    print(df.index.dtype,df['dt'].dtype)
+    df = df.reset_index(drop=True)
+    df['id'] = range(len(df))
     df['freq'] = 'D'
+
+
     # debug date列改不了名的问题,经过index=None参数发现是index是日期,把索引转换为date列 或者取消索引
     # df.reset_index(drop=True)
     # df.to_csv('df1.csv',header=None,index=None)
+    df.to_csv('df1.csv')
     # print(df)
 
     # 日期转换
-    df['dt'] = pd.to_datetime(df['dt'], format='%Y-%m-%d',errors='coerce')
+    # df['dt'] = pd.to_datetime(df['dt'], unit='ns')
+    # df['dt'] = pd.to_datetime(df['dt'], format='%Y-%m-%d',errors='coerce')
+    df['dt'] = pd.to_datetime(df['dt'],  errors='coerce', unit='ns')
 
     # 按要求排序
-    order = ['symbol', 'dt', 'freq', 'open', 'high', 'low', 'close','vol','amount']
+    order = ['symbol', 'id', 'dt', 'freq', 'open', 'high', 'low', 'close','vol','amount']
     df = df[order]
-    df = df.reset_index(drop=True)
-    df['id'] = range(len(df))
     return df
 
 
@@ -83,8 +88,8 @@ def is_contain(k1, k2):
     if k1['high'] > k2['high'] and k1['low'] < k2['low']:
         return True
 
-    # K线2的最高价大于K线1最高价且K线2最低价小于K线1最低价,则K线2包含K线1
-    elif k2['high'] > k1['high'] and k2['low'] < k1['low']:
+    # K线1的最高价小于K线2最高价，且K线1最低价大于K线2最低价,则K线2包含K线1
+    elif k1['high'] < k2['high'] and k1['low'] > k2['low']:
         return True
     else:
         return False
@@ -164,8 +169,10 @@ def fx():
 
 # df = read_ol()
 df = read_file()
+print(df.index.dtype)
 df = format_daily_tdx(df,'000001.SH')
 
+pd.set_option('display.max_columns',None)
 # print(df[:10])
 # print(df[240:])
 print(df)
