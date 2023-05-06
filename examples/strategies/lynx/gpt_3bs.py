@@ -8,6 +8,7 @@ from pytdx.reader import *
 import pandas as pd
 
 from czsc import Direction, NewBar, RawBar
+# from czsc.analyze import remove_include
 
 
 # 使用PyTDx获取上证指数的最新250根日线数据
@@ -34,9 +35,9 @@ def format_daily_tdx(df: pd.DataFrame, symbol: str):
     df.rename(columns={'volume': 'vol'}, inplace=True)
     df['symbol'] = symbol
     # 索引转换为trade_date列
-    df['dt'] = df.index
+    df['dt1'] = df.index
     # 获取日期类型 datetime64,日期报错的原因是类型是int64
-    print(df.index.dtype,df['dt'].dtype)
+    # print(df.index.dtype,df['dt'].dtype)
     df = df.reset_index(drop=True)
     df['id'] = range(len(df))
     df['freq'] = 'D'
@@ -51,10 +52,10 @@ def format_daily_tdx(df: pd.DataFrame, symbol: str):
     # 日期转换
     # df['dt'] = pd.to_datetime(df['dt'], unit='ns')
     # df['dt'] = pd.to_datetime(df['dt'], format='%Y-%m-%d',errors='coerce')
-    df['dt'] = pd.to_datetime(df['dt'],  errors='coerce', unit='ns')
+    # df['dt'] = pd.to_datetime(df['dt'],  errors='coerce', unit='ns', utc=True)
 
     # 按要求排序
-    order = ['symbol', 'id', 'dt', 'freq', 'open', 'high', 'low', 'close','vol','amount']
+    order = ['symbol', 'id', 'dt1', 'freq', 'open', 'high', 'low', 'close','vol','amount']
     df = df[order]
     return df
 
