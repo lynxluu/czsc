@@ -1,8 +1,14 @@
 import os
+import re
+import io
 
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+from PIL import Image
+from docx.shared import Cm
 import urllib3
 
 # 忽略 SSL 证书警告
@@ -29,7 +35,7 @@ def get_links(url):
 
     # lists排序
     sorted_links = sorted(links)
-    return sorted_links[:5]
+    return sorted_links[:109]
 
 
 # 爬取特定链接内容
@@ -56,6 +62,43 @@ def get_content(url):
     res = [title,time,content]
     return res
 
+def get_content2(url):
+    try:
+        # 发送HTTP请求
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(e)
+        return []
+
+    # 解析HTML文档
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # 获取标题
+    title_tag = soup.find('h1')
+    title = title_tag.get_text() if title_tag else ''
+
+    # 获取时间
+    time_tag = soup.find('blockquote')
+    time = time_tag.get_text() if time_tag else ''
+
+    # 获取内容
+    content_tag = soup.find('article')
+    content = ''
+    if content_tag:
+        # 获取段落
+        paragraphs = content_tag.find_all('p')
+        content = '\n'.join([p.get_text() for p in paragraphs])
+
+        # 获取图片
+        images = content_tag.find_all('img')
+        for img in images:
+            src = img.get('src')
+            alt = img.get('alt')
+            size = (img.get('width'), img.get('height'))
+            content += f'\n[Image] src={src} alt={alt} size={size}'
+
+    return [title, time, content]
 
 # 保存内容到单个 Word 文档
 def save_to_word(doc, content, title):
@@ -63,33 +106,91 @@ def save_to_word(doc, content, title):
     # 添加正文内容到 Word 文档
     doc.add_paragraph(content)
 
+# 保存多个url地址到同一个word文档
+def save_to_word2(urls, filename):
+    # 创建Word文档
+    document = Document()
+
+    # 设置字体
+    document.styles['Normal'].font.name = 'Microsoft YaHei'
+    document.styles['Normal'].element.rPr.rFonts.set(qn('w:eastAsia'), 'Microsoft YaHei')
+    # 将页面边距设置为A4纸的大小
+    section = document.sections[0]
+    section.page_width = Cm(21)
+    section.page_height = Cm(29.7)
+    section.left_margin = Cm(2.54)
+    section.right_margin = Cm(2.54)
+    section.top_margin = Cm(2.54)
+    section.bottom_margin = Cm(2.54)
+    # 设置图片宽度
+    width = section.page_width - section.left_margin - section.right_margin
+
+
+    # 循环处理每个网页
+    for url in urls:
+        print(f"processing {url}")
+        # 获取内容
+        content = get_content2(url)
+        # print(content)
+
+        # 添加标题
+        title = content[0]
+        document.add_heading(title, level=1)
+
+        # # 添加时间
+        # time = content[1]
+        # document.add_paragraph(time)
+
+        # 添加内容
+        sub_content = content[2]
+        # document.add_paragraph(sub_content)
+        paragraphs = sub_content.split('\n')
+        for p in paragraphs:
+            if p.startswith('[Image]'):
+                # 添加图片
+                # print(p,p.split())
+                _, src, alt, size = p.split(' ', 3)
+                src = src[4:]
+                response = requests.get(get_abs_url(src), stream=True)
+                pic = response.content
+                file_obj = io.BytesIO(pic)
+
+                # 缩放图片并将其添加到Word文档中,指定宽度，自动缩放，需要设置为A4纸的宽度大约为16cm
+                # 原来设置width=500超出了页面限制，所以无法显示。
+                # document.add_picture(file_obj)
+                document.add_picture(file_obj, width=width)
+
+            else:
+                # 添加段落
+                paragraph = document.add_paragraph()
+                paragraph.add_run(p).font.size = Pt(12)
+
+    # 保存文档
+    document.save(filename)
+
+def get_abs_url(rel_url):
+    base_url = 'https://chzhshch.blog'
+    url = base_url + rel_url
+    return url
+
 def main():
     base_url = 'https://chzhshch.blog'
     target_url = base_url + '/stocks/wolves'
     # print(target_url)
-    # 获取所有相关链接
-    links = get_links(target_url)
+    # 获取所有相关相对链接
+    rel_urls = get_links(target_url)
+    urls = []
+    # print(rel_urls)
 
-    # 创建一个新的 Word 文档，用于保存所有文章内容
-    doc = Document()
-
-    # 遍历链接，获取文章内容并保存到 Word 文档
-    for link in links:
-        url = base_url + link
-        res = get_content(url)
-        # print(url, res)
-
-        title = res[0]
-        time = res[1]
-        content = res[2]
-
-        print(f"Processing {link,title}")
-        save_to_word(doc, content, title)
-
+    # 获得绝对链接
+    for rel_url in rel_urls:
+        # url = base_url + rel_url
+        # urls.append(url)
+        urls.append(get_abs_url(rel_url))
 
     # 指定保存路径
     file_path = os.path.join(r"D:\usr\doc",'czsc108' + '.docx')
-    doc.save(file_path)
+    save_to_word2(urls, file_path)
 
 if __name__ == '__main__':
     main()
