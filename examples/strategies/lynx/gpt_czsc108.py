@@ -5,11 +5,15 @@ import io
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
+from zipfile import ZipFile
+from io import BytesIO
+
 from docx.shared import Pt
 from docx.oxml.ns import qn
 from PIL import Image
 from docx.shared import Cm
 import urllib3
+from lxml import etree
 
 # 忽略 SSL 证书警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -107,7 +111,7 @@ def save_to_word(doc, content, title):
     doc.add_paragraph(content)
 
 # 保存多个url地址到同一个word文档
-def save_to_word2(urls, filename):
+def save_to_word2(urls, file_path):
     # 创建Word文档
     document = Document()
 
@@ -166,16 +170,87 @@ def save_to_word2(urls, filename):
                 paragraph.add_run(p).font.size = Pt(12)
 
     # 保存文档
-    document.save(filename)
+    document.save(file_path)
 
+def save_to_word3(url, file_path):
+    # 不存在则创建Word文档
+    if not os.path.isfile(file_path):
+        document = Document()
+        # 添加一个标题
+        document.add_heading('Document Title', level=0)
+        # 添加一个段落
+        document.add_paragraph('This is a paragraph.')
+        document.save(file_path)
+
+    # 否则打开现有的Word文档
+    with ZipFile(file_path, 'a') as zip:
+        # 读取Word文档中的document.xml文件
+        with zip.open('word/document.xml') as xml:
+            # 将文件内容读取到内存中
+            xml_content = xml.read()
+
+        # 将文件内容加载到Document对象中
+        # 将XML内容解析为元素树
+        root = etree.fromstring(xml_content)
+
+        # 创建一个新的Document对象
+        document = Document()
+
+        # 将元素树加载到Document对象中
+        document_part = document.part
+        document_part._element.clear()
+        document_part._element.append(root)
+
+        # 设置字体
+        document.styles['Normal'].font.name = 'Microsoft YaHei'
+        document.styles['Normal'].element.rPr.rFonts.set(qn('w:eastAsia'), 'Microsoft YaHei')
+
+        # 处理网页
+        print(f"processing {url}")
+        # 获取内容
+        content = get_content2(url)
+        # print(content)
+
+        # 添加标题
+        title = content[0]
+        document.add_heading(title, level=1)
+
+
+        # 添加内容
+        sub_content = content[2]
+        # document.add_paragraph(sub_content)
+        paragraphs = sub_content.split('\n')
+        for p in paragraphs:
+            if p.startswith('[Image]'):
+                # 添加图片
+                # print(p,p.split())
+                _, src, alt, size = p.split(' ', 3)
+                src = src[4:]
+                response = requests.get(get_abs_url(src), stream=True)
+                pic = response.content
+                file_obj = io.BytesIO(pic)
+
+                document.add_picture(file_obj, width=16)
+
+            else:
+                # 添加段落
+                paragraph = document.add_paragraph()
+                paragraph.add_run(p).font.size = Pt(12)
+
+        # 将文档保存回原始文件
+        with zip.open('word/document.xml', 'w') as xml:
+            xml.write(document._element.xml.encode())
+
+    # # 保存文档
+    # document.save(filename)
 def get_abs_url(rel_url):
     base_url = 'https://chzhshch.blog'
     url = base_url + rel_url
     return url
 
 def main():
-    base_url = 'https://chzhshch.blog'
-    target_url = base_url + '/stocks/wolves'
+    target_url = get_abs_url('/stocks/wolves')
+    file_path = os.path.join(r"D:\usr\doc",'czsc108' + '.docx')
     # print(target_url)
     # 获取所有相关相对链接
     rel_urls = get_links(target_url)
@@ -184,13 +259,13 @@ def main():
 
     # 获得绝对链接
     for rel_url in rel_urls:
-        # url = base_url + rel_url
+        url = get_abs_url(rel_url)
+        save_to_word3(url, file_path)
         # urls.append(url)
-        urls.append(get_abs_url(rel_url))
+        # urls.append(get_abs_url(rel_url))
 
     # 指定保存路径
-    file_path = os.path.join(r"D:\usr\doc",'czsc108' + '.docx')
-    save_to_word2(urls, file_path)
+    # save_to_word2(urls, file_path)
 
 if __name__ == '__main__':
     main()
