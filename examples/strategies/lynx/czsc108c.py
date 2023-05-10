@@ -79,44 +79,47 @@ for page_number, title, contents in articles:
 
         # https://chzhshch.blog/stocks/002
         # 从这篇来看 h2后面接的平级的若干个div才是真正的回复
-        elif element.name == 'h2' or element.name == 'h3':
+        elif element.name in ['h2', 'h3']:
             print(element)
             document.add_heading('回复', level=2)
             # 获取下一级标签是 <h2> 的内容
-            for div in element.children:
-                if div.name == 'div':
-                    print('div',div)
-                    # 遍历所有的 <div> 标签
-                    # 获取回复者
-                    replyer = ''
-                    replyer_tag = div.find('span')
-                    replyer = replyer_tag.get_text() if replyer_tag else ''
-                    print(replyer)
+            divs = element.find_next_siblings('div')
+            print(divs)
+            end_element = element.find_next_sibling(['h2', 'h3'])
+            if end_element:
+                divs = divs[:divs.index(end_element)]
+            for div in divs:
+                print('div',div)
+                # 获取回复者
+                replyer = ''
+                replyer_tag = div.find('span')
+                replyer = replyer_tag.get_text() if replyer_tag else ''
+                print(replyer)
 
-                    # 获取回复时间
-                    time_str = ''
-                    try:
-                        time_str = div.find('br').previous_sibling.strip()
-                        reply_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-                    except Exception as e:
-                        reply_time= None
-                        print(e)
-                    print(time_str)
+                # 获取回复时间
+                time_str = ''
+                try:
+                    time_str = div.find('br').previous_sibling.strip()
+                    reply_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+                except Exception as e:
+                    reply_time= None
+                    print(e)
+                print(time_str)
 
-                    document.add_paragraph(replyer+time_str)
+                document.add_paragraph(replyer+time_str)
 
-                    #获取回复内容
-                    reply_text = ''
-                    try:
-                        p_tags = div.find_all('p')
-                        print(div,p_tags)
-                        for p_tag in p_tags:
-                            reply_text += p_tag.text.strip() + '\n'
-                    except Exception as e:
-                        print(e)
-                    print(reply_text)
+                #获取回复内容
+                reply_text = ''
+                try:
+                    p_tags = div.find_all('p')
+                    print(div,p_tags)
+                    for p_tag in p_tags:
+                        reply_text += p_tag.text.strip() + '\n'
+                except Exception as e:
+                    print(e)
+                print(reply_text)
 
-                    document.add_paragraph(reply_text)
+                document.add_paragraph(reply_text)
 
 
             # for reply in element.find_all('span'):
