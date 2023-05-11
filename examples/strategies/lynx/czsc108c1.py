@@ -9,7 +9,7 @@ from datetime import datetime
 
 # 定义爬取的网站地址和页面范围
 base_url = 'https://chzhshch.blog/stocks/'
-page_range = range(1, 6)
+page_range = range(1, 3)
 
 # 创建一个列表，用于保存爬取的文章内容
 articles = []
@@ -79,10 +79,11 @@ for page_number, title, contents in articles:
                         # image_response = requests.get(image_url)
                         image_response = requests.get(get_abs_url(image_url),stream=True)
                         image = io.BytesIO(image_response.content)
-                        image_response.raise_for_status()  # 检查响应状态码是否为 200
+                        if image_response.raise_for_status() == 200:  # 检查响应状态码是否为 200
+                            document.add_picture(image, width=Inches(6))
                     except requests.exceptions.RequestException as e:
                         print(f"请求图片 {image_url} 失败: {e}")
-                    document.add_picture(image, width=Inches(6))
+
 
         # https://chzhshch.blog/stocks/002
         # 从这篇来看 h2后面接的平级的若干个div才是真正的回复
@@ -92,9 +93,9 @@ for page_number, title, contents in articles:
             # 获取下一级标签是 <h2> 的内容
             divs = element.find_next_siblings('div')
             # print('divs',divs)
-            end_element = element.find_next_sibling(['h2', 'h3'])
-            if end_element:
-                divs = divs[:divs.index(end_element)]
+            # end_element = element.find_next_sibling(['h2', 'h3'])
+            # if end_element:
+            #     divs = divs[:divs.index(end_element)]
             for div in divs:
                 # print('div',div)
                 # 获取回复者
@@ -107,9 +108,10 @@ for page_number, title, contents in articles:
                 time_str = ''
                 try:
                     time_str = div.find('br').previous_sibling.strip()
-                    reply_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+                    # reply_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+                    if not time_str:
+                        time_str = None
                 except Exception as e:
-                    reply_time= None
                     print(e)
                 # print(time_str)
                 document.add_paragraph(replyer+': ' +time_str)
@@ -129,7 +131,7 @@ for page_number, title, contents in articles:
                 except Exception as e:
                     print(e)
 
-                print(reply_text)
+                # print(reply_text)
                 document.add_paragraph(reply_text)
 
 
