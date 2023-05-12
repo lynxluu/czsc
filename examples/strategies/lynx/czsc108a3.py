@@ -61,8 +61,8 @@ def main():
     file_path = os.path.join('czsc108.docx')
     # print(target_url)
     # 获取所有相关相对链接
-    # rel_urls = get_links(target_url)[:110]
-    rel_urls = get_links(target_url)[79:85]
+    rel_urls = get_links(target_url)[:110]
+    # rel_urls = get_links(target_url)[84:85]
     urls = []
     # print(rel_urls)
 
@@ -99,6 +99,7 @@ def main():
         time_tag = article.find('blockquote')
         time_str = time_tag.get_text() if time_tag else ''
         time = datetime.strptime(time_str, '%Y/%m/%d %H:%M:%S')
+        document.add_paragraph(time_str)
 
         # 递归遍历所有子标签
         def traverse(tag):
@@ -120,7 +121,9 @@ def main():
                 elif child.name == 'span':
                     document.add_paragraph(child.text)
                 elif child.name =='br':
-                    document.add_paragraph(child.previous_sibling.text)
+                    # 杜绝无内容的br占据很大篇幅
+                    if child.previous_sibling.name != 'br':
+                        document.add_paragraph(child.previous_sibling.text)
                 else:
                     traverse(child)
 
