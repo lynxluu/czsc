@@ -112,3 +112,4 @@ venv.bak/
 df
 examples/lynx/prepare_data.py
 *.csv
+*.docx

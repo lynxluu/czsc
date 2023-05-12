@@ -522,6 +522,12 @@ def save_to_word2c(urls, file_path):
 
     # 将排序后的内容写入 Word 文件
     merged_document = Document()
+
+    # if os.path.exists(file_path):
+    #     merged_document = Document(file_path)
+    # else:
+    #     merged_document = Document()
+
     section = merged_document.sections[0]
     section.page_width = Inches(6)
     # merged_document.default_width = Inches(6)
@@ -535,6 +541,7 @@ def save_to_word2c(urls, file_path):
                 print(element.attrib)
             merged_document.element.body.append(element)
             # merged_document.add_document(content_doc)
+        merged_document.add_page_break()
 
     merged_document.save(file_path)
     # merge_documents(contents,file_path)
