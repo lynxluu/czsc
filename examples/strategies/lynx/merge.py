@@ -117,15 +117,12 @@ def merge_klines(klines: pd.DataFrame) -> pd.DataFrame:
             # 如果k2，k3不包含，写入k3
             n_klines = pd.concat([n_klines, k3.to_frame().T])
 
-        # print(n_klines.iloc[-1])
-        # prt(n_klines.iloc[-1])
-
-    # return pd.concat(n_klines)
     return n_klines
 
 def merge_klines2(klines: pd.DataFrame) -> pd.DataFrame:
     # 若输入k线不大于2条，返回None
     n = len(klines)
+    print('开始处理%d条k线：'%n)
     if n <= 2:
         return pd.DataFrame()
 
@@ -137,15 +134,13 @@ def merge_klines2(klines: pd.DataFrame) -> pd.DataFrame:
             if is_contained(k1a, k2a) is None:
                 n_klines.append(k1a)
                 n_klines.append(k2a)
-                # print(len(n_klines), n_klines)
-                # continue
             else:
                 continue
 
 
         k1, k2, k3, k4 = n_klines[-2], n_klines[-1], klines.iloc[i], None
 
-        print(i,len(n_klines))
+        # print(i,len(n_klines))
 
         # 如果k2、k3包含，生成k4，弹出k2，合并k4
         if is_contained(k2, k3):
@@ -164,18 +159,16 @@ def merge_klines2(klines: pd.DataFrame) -> pd.DataFrame:
                       'turnover': k2['turnover'] + k3['turnover'],
                       'date': k3['date'], 'symbol': k3['symbol']}
 
-            # print("删除k2：",type(k2)), prt(k2)
             n_klines.pop()
             new_k = pd.DataFrame.from_dict(k4, orient='index').T.iloc[-1]
-            # print('合并k4：',type(k4)),print(k4['high'])
             n_klines.append(new_k)
 
         else:
             # 如果k2，k3不包含，合并k3
-            # print('合并k3：'), print(k3['high'])
             n_klines.append(k3)
 
     res = pd.DataFrame(n_klines)
+    print("合并后得到%d条k线"%len(n_klines))
     return res
     # return n_klines
 
