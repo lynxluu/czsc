@@ -33,94 +33,123 @@ def get_content2c(url):
         print(f"请求页面 {url} 失败: {e}")
         return
 
-    soup = BeautifulSoup(response.content, 'html.parser')
-    article = soup.find('article')
-    # 获取标题
-    title_tag = article.find('h1')
-    title = title_tag.get_text() if title_tag else ''
-
-    # 获取时间
-    time_tag = article.find('blockquote')
-    time_str = time_tag.get_text() if time_tag else ''
-    time = datetime.strptime(time_str, '%Y/%m/%d %H:%M:%S')
-
-    # 获取内容
-    content = article.contents
-
     document = Document()
 
     document.styles['Normal'].font.name = '微软雅黑'
     document.styles['Normal'].font.size = Pt(12)
     document.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), '微软雅黑')
 
-    # 添加标题
+
+    soup = BeautifulSoup(response.content, 'html.parser')
+    article = soup.find('article')
+
+    # 获取标题
+    title_tag = article.find('h1')
+    title = title_tag.get_text() if title_tag else ''
     document.add_heading(title, level=1)
-    # print(type(contents))
 
-    # 添加段落，图片
-    # print(content)
-    for element in content[0]:
-        print("element",element)
-        if element.name == 'p':
-            document.add_paragraph(element.text.strip())
-        elif element.name == 'div':
-            for img in element.children:
-                if img.name == 'img':
-                    image_url = img['src']
-                    try:
-                        # image_response = requests.get(image_url)
-                        image_response = requests.get(get_abs_url(image_url), stream=True)
-                        image = io.BytesIO(image_response.content)
-                        document.add_picture(image, width=Inches(6))
-                        # print(get_abs_url(image_url))
-                    except requests.exceptions.RequestException as e:
-                        print(f"请求图片 {image_url} 失败: {e}")
+    # 获取时间
+    time_tag = article.find('blockquote')
+    time_str = time_tag.get_text() if time_tag else ''
+    time = datetime.strptime(time_str, '%Y/%m/%d %H:%M:%S')
+    document.add_paragraph(time_str)
 
-        # 添加回复
-        elif element.name in ['h2', 'h3']:
-            # print('h2',element)
-            document.add_heading('回复', level=2)
-            # 获取下一级标签是 <h2> 的内容
-            divs = element.find_next_siblings('div')
-            for div in divs:
-                # 获取回复者
-                replyer = ''
-                replyer_tag = div.find('span')
-                replyer = replyer_tag.get_text() if replyer_tag else ''
-
-                # 获取回复时间
-                time_str = ''
+    def traverse(tag):
+        if tag.name is None:
+            return
+        for child in tag.children:
+            if child.name == 'p':
+                document.add_paragraph(child.text)
+            elif child.name == 'img':
+                image_url = child['src']
                 try:
-                    time_str = div.find('br').previous_sibling.strip()
-                    # reply_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-                    if not time_str:
-                        time_str = None
-                except Exception as e:
-                    print(e)
-                # print(time_str)
-                document.add_paragraph(replyer+': ' +time_str)
+                    # image_response = requests.get(get_abs_url(image_url), stream=True)
+                    # image = io.BytesIO(image_response.content)
+                    # document.add_picture(image, width=Inches(6))
+                    document.add_paragraph(get_abs_url(image_url))
+                except requests.exceptions.RequestException as e:
+                    print(f"请求图片 {image_url} 失败: {e}")
+            elif child.name in ['h2', 'h3']:
+                document.add_heading('回复', level=2)
+            elif child.name == 'span':
+                document.add_paragraph(child.text)
+            elif child.name == 'br':
+                # 杜绝无内容的br占据很大篇幅
+                if child.previous_sibling.name != 'br':
+                    document.add_paragraph(child.previous_sibling.text)
+            else:
+                traverse(child)
 
-                #获取回复内容
-                reply_text = ''
-                try:
-                    p_tags = div.find_all('p')
-                    # 如果p_tags存在，循环拼接p标签内容；如不存在，则取div内容
-                    if p_tags:
-                        # print(div,p_tags)
-                        for p_tag in p_tags:
-                            reply_text += p_tag.text.strip() + '\n'
-                    else:
-                        #替换掉多余的回复人和、回复时间
-                        reply_text = div.get_text(strip=True).replace(time_str, '').replace(replyer, '') + '\n'
-                except Exception as e:
-                    print(e)
+    # 遍历正文
+    for tag in article:
+        traverse(tag)
 
-                # print(reply_text)
-                document.add_paragraph(reply_text)
-
-    # 添加分页符，防止格式丢失
-    # document.add_page_break()
-    # document.add_section()
+    # 获取内容
+    # content = article.contents
+    # # 添加段落，图片
+    # # print(content)
+    # for element in content[0]:
+    #     print("element",element)
+    #     if element.name == 'p':
+    #         document.add_paragraph(element.text.strip())
+    #     elif element.name == 'div':
+    #         for img in element.children:
+    #             if img.name == 'img':
+    #                 image_url = img['src']
+    #                 try:
+    #                     # image_response = requests.get(image_url)
+    #                     image_response = requests.get(get_abs_url(image_url), stream=True)
+    #                     image = io.BytesIO(image_response.content)
+    #                     document.add_picture(image, width=Inches(6))
+    #                     # print(get_abs_url(image_url))
+    #                 except requests.exceptions.RequestException as e:
+    #                     print(f"请求图片 {image_url} 失败: {e}")
+    #
+    #     # 添加回复
+    #     elif element.name in ['h2', 'h3']:
+    #         # print('h2',element)
+    #         document.add_heading('回复', level=2)
+    #         # 获取下一级标签是 <h2> 的内容
+    #         divs = element.find_next_siblings('div')
+    #         for div in divs:
+    #             # 获取回复者
+    #             replyer = ''
+    #             replyer_tag = div.find('span')
+    #             replyer = replyer_tag.get_text() if replyer_tag else ''
+    #
+    #             # 获取回复时间
+    #             time_str = ''
+    #             try:
+    #                 time_str = div.find('br').previous_sibling.strip()
+    #                 # reply_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+    #                 if not time_str:
+    #                     time_str = None
+    #             except Exception as e:
+    #                 print(e)
+    #             # print(time_str)
+    #             document.add_paragraph(replyer+': ' +time_str)
+    #
+    #             #获取回复内容
+    #             reply_text = ''
+    #             try:
+    #                 p_tags = div.find_all('p')
+    #                 # 如果p_tags存在，循环拼接p标签内容；如不存在，则取div内容
+    #                 if p_tags:
+    #                     # print(div,p_tags)
+    #                     for p_tag in p_tags:
+    #                         reply_text += p_tag.text.strip() + '\n'
+    #                 else:
+    #                     #替换掉多余的回复人和、回复时间
+    #                     reply_text = div.get_text(strip=True).replace(time_str, '').replace(replyer, '') + '\n'
+    #             except Exception as e:
+    #                 print(e)
+    #
+    #             # print(reply_text)
+    #             document.add_paragraph(reply_text)
+    #
+    # # 添加分页符，防止格式丢失
+    # # document.add_page_break()
+    # # document.add_section()
 
     return [title, time, article,document]
 
@@ -136,7 +165,7 @@ def save_to_word2c(urls, file_path):
         # 将文档对象保存到内容列表中
         contents.append(get_content2c(url))
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(process_url, url) for url in urls]
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -213,8 +242,9 @@ def main():
     file_path = os.path.join('czsc108text.docx')
     # print(target_url)
     # 获取所有相关相对链接
+    rel_urls = get_links(target_url)
     # rel_urls = get_links(target_url)[:110]
-    rel_urls = get_links(target_url)[6:7]
+    # rel_urls = get_links(target_url)[1:7]
     urls = []
     # print(rel_urls)
 
