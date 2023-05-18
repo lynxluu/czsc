@@ -163,11 +163,16 @@ def count_klines3(klines) -> int:
 
 def merge_klines3(klines):
     # 1.df转列表，若输入k线不大于2条，返回None
+    if not klines:
+        return []
+
     newbars = klines.apply(crt_newbar, axis=1)
     n = len(newbars)
     print('开始处理%d条k线：'%n)
     if n <= 2:
         return []
+
+
 
     # 2. 从klines头部寻找两条不包含的k线 加入结果列表n_klines
     n_klines = []
@@ -226,16 +231,23 @@ def main():
     # sdt = '20200101'
 
     # df = None
+    bars = []
     for symbol in symbols:
-        symbol = symbol.rstrip('#I')
-        bars = dc.pro_bar(ts_code=symbol, asset='E', adj='qfq', freq=freq,
-                              start_date=sdt, end_date=edt, raw_bar=True)
+        symbol = symbol.split('#')[0]
+        print(symbol, asset, adj, freq, sdt, edt)
+        try:
+            bars = dc.pro_bar(ts_code=symbol, asset=asset, adj=adj, freq=freq,
+                                  start_date=sdt, end_date=edt, raw_bar=True)
 
-        # 实际上dc.pro_bar已经取到最新的k线了，无需费心
-        print(bars[0],bars[-1])
+            # bars = ts.pro_bar(ts_code=symbol, asset=asset, adj=adj, freq=freq,
+            #                       start_date=sdt, end_date=edt)
+            # 实际上dc.pro_bar已经取到最新的k线了，无需费心
+            print(bars[0],bars[-1])
+        except Exception as e:
+            print(e)
 
         # df = pd.DataFrame(bars)
-        print(sdt, edt, len(bars))
+        # print(sdt, edt, len(bars))
 
         # merged_klines = merge_klines(df)
         merged_klines3 = merge_klines3(bars)
