@@ -163,10 +163,11 @@ def count_klines3(klines) -> int:
 
 def merge_klines3(klines):
     # 1.df转列表，若输入k线不大于2条，返回None
-    if not klines:
-        return []
+    # if not klines:
+    #     return []
 
     newbars = klines.apply(crt_newbar, axis=1)
+    # newbars = klines
     n = len(newbars)
     print('开始处理%d条k线：'%n)
     if n <= 2:
@@ -217,7 +218,8 @@ def merge_klines3(klines):
 def main():
     # 初始化 Tushare 数据缓存
     dc = TsDataCache(data_path=r"D:\ts_data\share", refresh=True)
-    symbols = get_symbols(dc, step='index')
+    # symbols = get_symbols(dc, step='index')[:3]
+    symbols = ['688981.SH']
     print(symbols)
     # symbol = '688981.SH'
     freq = 'D'
@@ -246,11 +248,11 @@ def main():
         except Exception as e:
             print(e)
 
-        # df = pd.DataFrame(bars)
+        df = pd.DataFrame(bars)
         # print(sdt, edt, len(bars))
 
         # merged_klines = merge_klines(df)
-        merged_klines3 = merge_klines3(bars)
+        merged_klines3 = merge_klines3(df)
 
         # print(len(merged_klines), count_klines(merged_klines))
 
