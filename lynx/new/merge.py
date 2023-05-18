@@ -1,4 +1,4 @@
-# import tushare as ts
+# import pip as ts
 import akshare as ak
 import pandas as pd
 import requests
