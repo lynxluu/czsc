@@ -130,36 +130,51 @@ def main():
 
     # # 处理单个代码
     # # 000905.SH  000016.SH  512880.SH 688981.SH  000999.SZ  002624.SZ
-    symbol = '688111.SH#E'
-    bars = get_bars(dc, symbol)
+    # symbol = '688111.SH#E'
+    symbol = '000932.SH#I'
+    bars = get_bars(dc, symbol)[-100:]
     n_bars = merge_bars(bars)
 
-    # display(symbol, bars)
-    display(symbol, n_bars)
     # for bar in n_bars[-20:]:
     #     print(bar.dt)
 
     # test_merge(n_bars)
-    test_fx(n_bars[-20:])
+    test_fx(n_bars)
+
+    # bi, bars_b = check_bi(n_bars[-40:])
+    # 在echart中展示
+    show(bars)
+
+    # 在streamlit中展示
+    # display(symbol, bars)
+    # display(symbol, n_bars)
 
     # # 处理批量代码
     # symbols = get_symbols(dc, step='index')[:3]
     # # symbols = ['600436.SH','600129.SH','688111.SH','688981.SH','000999.SZ','002624.SZ','300223.SZ','301308.SZ']
     # res2 = get_bars_list(dc, symbols)
 
-def test_fx(n_bars):
-    fxs = check_fxs(n_bars)
+def test_fx(bars):
+    fxs = check_fxs(bars)
 
     gao, di = 0,0
     for fx in fxs:
         if fx.mark == Mark.G:
             gao += 1
+            print(fx.dt, fx.mark,fx.high)
         elif fx.mark == Mark.D:
             di += 1
-        print(fx.dt,fx.mark)
+            print(fx.dt, fx.mark,fx.low)
+
     print('获得分型数量：%d，其中顶分型：%d个，底分型：%d个.' % (len(fxs),gao,di))
     # 查看发现5.12明显不是底分型
 
+# 展示k线
+def show(bars):
+    # 在echart中展示
+    cs = CZSC(bars)
+    cs.to_echarts(width='1200px', height='560px')
+    cs.open_in_browser(width='1200px', height='560px')
 
 if __name__ == '__main__':
     main()

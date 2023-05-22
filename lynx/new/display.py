@@ -3,7 +3,8 @@ from datetime import datetime
 import streamlit_echarts as st_echarts
 
 # from czsc import CzscSignals, CZSC
-from czsc import CZSC
+# from czsc import CZSC
+from analyze import CZSC
 from czsc.data import TsDataCache, get_symbols
 from czsc.utils import BarGenerator
 
