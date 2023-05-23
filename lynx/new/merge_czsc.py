@@ -139,22 +139,24 @@ def main():
     #     print(bar.dt)
 
     # test_merge(n_bars)
-    test_fx(n_bars)
+    # test_fx(n_bars)
+    test_bi(n_bars)
 
     # bi, bars_b = check_bi(n_bars[-40:])
     # 在echart中展示
     show(bars)
 
     # 在streamlit中展示
-    # display(symbol, bars)
-    # display(symbol, n_bars)
+    # displayD(symbol, bars)
 
     # # 处理批量代码
     # symbols = get_symbols(dc, step='index')[:3]
-    # # symbols = ['600436.SH','600129.SH','688111.SH','688981.SH','000999.SZ','002624.SZ','300223.SZ','301308.SZ']
+    # symbols = symbols = ['688111.SH','688981.SH','600436.SH','600129.SH','000999.SZ',\
+    #                  '002624.SZ','300223.SZ','301308.SZ','515880.SH#FD', '512980.SH#FD']
     # res2 = get_bars_list(dc, symbols)
 
-def test_fx(bars):
+
+def test_fx(bars: list[NewBar]) -> list[FX]:
     fxs = check_fxs(bars)
 
     gao, di = 0,0
@@ -168,6 +170,11 @@ def test_fx(bars):
 
     print('获得分型数量：%d，其中顶分型：%d个，底分型：%d个.' % (len(fxs),gao,di))
     # 查看发现5.12明显不是底分型
+    return fxs
+
+def test_bi(bars: list[NewBar]) -> list[FX]:
+    bi_list=[]
+
 
 # 展示k线
 def show(bars):

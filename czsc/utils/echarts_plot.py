@@ -91,9 +91,14 @@ def kline_pro(kline: List[dict],
     """
     # 配置项设置
     # ------------------------------------------------------------------------------------------------------------------
-    bg_color = "#1f212d"  # 背景
-    up_color = "#F9293E"
-    down_color = "#00aa3b"
+    # bg_color = "#1f212d"  # 背景黑色
+    # up_color = "#F9293E"    # 红色
+    # down_color = "#00aa3b"  # 绿色
+
+    # 取色网站 https://www.sioe.cn/yingyong/yanse-rgb-16/
+    bg_color = "#FFFFFF"  # 白色
+    up_color = "#C0C0C0"    # 银白
+    down_color = "#B0E0E6"  # 火药蓝
 
     init_opts = opts.InitOpts(bg_color=bg_color, width=width, height=height, animation_opts=opts.AnimationOpts(False))
     title_opts = opts.TitleOpts(title=title, pos_top="1%",
@@ -281,7 +286,9 @@ def kline_pro(kline: List[dict],
     chart_ma = Line()
     chart_ma.add_xaxis(xaxis_data=dts)
     if not t_seq:
-        t_seq = [5, 13, 21, 34, 55, 89, 144, 233]
+        # t_seq = [5, 13, 21, 34, 55, 89, 144, 233]
+        # 更改默认均线数量
+        t_seq = [5, 10, 20]
 
     ma_keys = dict()
     for t in t_seq:

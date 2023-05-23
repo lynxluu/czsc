@@ -13,7 +13,8 @@ from loguru import logger
 from typing import List, Callable
 from collections import OrderedDict
 from czsc.enum import Mark, Direction
-from czsc.objects import BI, FX, RawBar, NewBar
+# from czsc.objects import BI, FX, RawBar, NewBar
+from objects import BI, FX, RawBar, NewBar
 from czsc.utils.echarts_plot import kline_pro
 from czsc import envs
 
@@ -83,11 +84,17 @@ def check_fx(k1: NewBar, k2: NewBar, k3: NewBar):
     # Mark.G 顶分，Mark.D 底分；fx 分型的高低点。
     fx = None
     if k1.high < k2.high > k3.high and k1.low < k2.low > k3.low:
+        # fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.G, high=k2.high,
+        #         low=k2.low, fx=k2.high, elements=[k1, k2, k3])
         fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.G, high=k2.high,
+                high_a=max(k1.high, k3.high), low_a=min(k1.low, k2.low),
                 low=k2.low, fx=k2.high, elements=[k1, k2, k3])
 
     if k1.low > k2.low < k3.low and k1.high > k2.high < k3.high:
+        # fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.D, high=k2.high,
+        #         low=k2.low, fx=k2.low, elements=[k1, k2, k3])
         fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.D, high=k2.high,
+                high_a=max(k1.high, k3.high), low_a=min(k1.low, k2.low),
                 low=k2.low, fx=k2.low, elements=[k1, k2, k3])
 
     return fx
@@ -123,7 +130,9 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     :param benchmark: 当下笔能量的比较基准
     :return:
     """
-    # 这里get_min_bi_len()=6 是新笔
+    # 这里get_min_bi_len()=6 是新笔，他从分型开始和结束计算
+    # 我算法不同，从顶底的最高处计算k线数量，所以要减2
+    # min_bi_len = envs.get_min_bi_len()-2
     min_bi_len = envs.get_min_bi_len()
     fxs = check_fxs(bars)
     if len(fxs) < 2:
@@ -132,25 +141,25 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     fx_a = fxs[0]
     try:
         if fxs[0].mark == Mark.D:
+            # fx_a是底的话 朝上，求最高的顶分型 fx_b
             direction = Direction.Up
             fxs_b = [x for x in fxs if x.mark == Mark.G and x.dt > fx_a.dt and x.fx > fx_a.fx]
             if not fxs_b:
                 return None, bars
 
             fx_b = fxs_b[0]
-            # fx_a是底的话 求最顶的顶分型 fx_b, 其实只要
             for fx in fxs_b[1:]:
                 if fx.high >= fx_b.high:
                     fx_b = fx
 
         elif fxs[0].mark == Mark.G:
+            # fx_a是顶的话 朝下，求最低的底分型 fx_b
             direction = Direction.Down
             fxs_b = [x for x in fxs if x.mark == Mark.D and x.dt > fx_a.dt and x.fx < fx_a.fx]
             if not fxs_b:
                 return None, bars
 
             fx_b = fxs_b[0]
-            # fx_a是顶的话，求最底的底分型 fx_b
             for fx in fxs_b[1:]:
                 if fx.low <= fx_b.low:
                     fx_b = fx
@@ -163,13 +172,26 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     # 打印 找出的 fx_a和 fx_b
     # logger.info(f"{len(fxs),fx_a.dt, fx_b.dt}")
 
-    # bars_a fx_a--fx_b一笔中间的k线， bars_b fx_b开始的k线
+    # bars是合并过的k线，bars_a 计算fx_a左侧--fx_b右侧 的合并k线
+    # bars_ar 计算fx_a左侧--fx_b右侧的未合并k线
+    # bars_b fx_b左侧开始的合并k线
     bars_a = [x for x in bars if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
+    bars_ar = []
+    for x in bars_a:
+        for y in x.elements:
+            if fx_a.elements[0].dt <= y.dt <= fx_b.elements[2].dt:
+                bars_ar.append(y)
     bars_b = [x for x in bars if x.dt >= fx_b.elements[0].dt]
 
     # 判断fx_a和fx_b价格区间是否存在包含关系
     ab_include = (fx_a.high > fx_b.high and fx_a.low < fx_b.low) \
                  or (fx_a.high < fx_b.high and fx_a.low > fx_b.low)
+
+
+    # 判断fx_a的区间和fx_b的区间是否存在包含关系，待实现
+    area_include = (fx_a.high_a > fx_b.high_a and fx_a.low_a < fx_b.low_a) \
+                   or (fx_a.high_a < fx_b.high_a and fx_a.low_a > fx_b.low_a)
+
 
     # # 判断当前笔的涨跌幅是否超过benchmark的一定比例
     # if benchmark and abs(fx_a.fx - fx_b.fx) > benchmark * envs.get_bi_change_th():
@@ -178,8 +200,21 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     #     power_enough = False
     power_enough = False
 
-    # 成笔的条件：1）顶底分型之间没有包含关系；2）笔长度大于等于min_bi_len 或 当前笔的涨跌幅已经够大
-    if (not ab_include) and (len(bars_a) >= min_bi_len or power_enough):
+    # 成笔的条件：
+    # 1）顶底分型之间没有包含关系；
+    # 2) 分型区间之间没有包含关系
+    # 3）笔长度 大于 min_bi_len6
+    # 4) or笔长度 = min_bi_len6,未合并k线>=7
+    # 5）or笔长度 < min_bi_len6, 笔之间有3K或以上重叠 check_overlap
+    # 或 当前笔的涨跌幅已经够大,不使用
+    should_execute = (not ab_include) and (not area_include) and (
+            (len(bars_a) > min_bi_len and len(bars_ar) >= 7) or
+            (len(bars_a) == min_bi_len and len(bars_ar) >= 7) or
+            (len(bars_a) < min_bi_len and check_overlap(bars_ar) >= 3)
+    )
+
+    if should_execute:
+    # if (not ab_include) and (len(bars_a) >= min_bi_len or power_enough):
         fxs_ = [x for x in fxs if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
         bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
 
@@ -193,6 +228,14 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     else:
         return None, bars
 
+def check_overlap(bars: list[RawBar]):
+    # 存放结果
+    res = []
+    pre = None
+    temp = None
+    for bar in bars:
+        if pre:
+            temp = NewBar()
 
 class CZSC:
     def __init__(self,
@@ -230,9 +273,8 @@ class CZSC:
 
         # 查找笔
         if not self.bi_list:
-            # 第一笔的查找
+            # 第一笔的查找, 笔列表为空
             fxs = check_fxs(bars_ubi)
-            # logger.info(f"从bars_ubi{bars_ubi[0].dt, bars_ubi[-1].dt},找到分型{len(fxs)}个")
 
             if not fxs:
                 return
@@ -281,10 +323,10 @@ class CZSC:
         bars_ubi = self.bars_ubi
         if (last_bi.direction == Direction.Up and bars_ubi[-1].high > last_bi.high) \
                 or (last_bi.direction == Direction.Down and bars_ubi[-1].low < last_bi.low):
+            logger.info(f"笔{last_bi.fx_b.dt}被k线{self.bars_ubi[-1].dt}破坏，bars_ubi的k线从{last_bi.bars[0].dt,last_bi.bars[-1].dt}开始加回来")
             self.bars_ubi = last_bi.bars[:-1] + [x for x in bars_ubi if x.dt >= last_bi.bars[-1].dt]
             self.bi_list.pop(-1)
 
-            logger.info(f"笔破坏{last_bi.fx_b.dt},笔的k线加回来{self.bars_ubi[0].dt}")
 
     def update(self, bar: RawBar):
         """更新分析结果
