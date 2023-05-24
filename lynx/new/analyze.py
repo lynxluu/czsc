@@ -14,7 +14,7 @@ from typing import List, Callable
 from collections import OrderedDict
 from czsc.enum import Mark, Direction
 # from czsc.objects import BI, FX, RawBar, NewBar
-from objects import BI, FX, RawBar, NewBar
+from objects import BI, FX, RawBar, NewBar,CDK
 from czsc.utils.echarts_plot import kline_pro
 from czsc import envs
 
@@ -139,6 +139,7 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
         return None, bars
 
     fx_a = fxs[0]
+    # 笔步骤1 找出两个相反的分型 fx_a fx_b
     try:
         if fxs[0].mark == Mark.D:
             # fx_a是底的话 朝上，求最高的顶分型 fx_b
@@ -169,10 +170,12 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
         logger.exception("笔识别错误")
         return None, bars
 
+    # logger.info(f"笔步骤1a- K线范围-{bars[0].dt,bars[-1].dt},分型范围{fx_a.dt,fx_b.dt}")
     # 打印 找出的 fx_a和 fx_b
     # logger.info(f"{len(fxs),fx_a.dt, fx_b.dt}")
 
-    # bars是合并过的k线，bars_a 计算fx_a左侧--fx_b右侧 的合并k线
+    # 笔步骤2 计算nk和重叠k
+    # bars是合并过的k线，bars_a 计算fx_a左侧--fx_b右侧 范围内的合并k线
     # bars_ar 计算fx_a左侧--fx_b右侧的未合并k线
     # bars_b fx_b左侧开始的合并k线
     bars_a = [x for x in bars if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
@@ -188,10 +191,14 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
                  or (fx_a.high < fx_b.high and fx_a.low > fx_b.low)
 
 
-    # 判断fx_a的区间和fx_b的区间是否存在包含关系，待实现
-    area_include = (fx_a.high_a > fx_b.high_a and fx_a.low_a < fx_b.low_a) \
-                   or (fx_a.high_a < fx_b.high_a and fx_a.low_a > fx_b.low_a)
+    # 判断fx_a的区间和fx_b的区间是否存在包含关系
+    # area_include = (fx_a.high_a > fx_b.high_a and fx_a.low_a < fx_b.low_a) \
+    #                or (fx_a.high_a < fx_b.high_a and fx_a.low_a > fx_b.low_a)
 
+    area_include = None
+
+    # 计算重叠k线
+    has_cdk, cdk_list = check_cdk(bars_a[1:-1])
 
     # # 判断当前笔的涨跌幅是否超过benchmark的一定比例
     # if benchmark and abs(fx_a.fx - fx_b.fx) > benchmark * envs.get_bi_change_th():
@@ -203,39 +210,80 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     # 成笔的条件：
     # 1）顶底分型之间没有包含关系；
     # 2) 分型区间之间没有包含关系
-    # 3）笔长度 大于 min_bi_len6
-    # 4) or笔长度 = min_bi_len6,未合并k线>=7
-    # 5）or笔长度 < min_bi_len6, 笔之间有3K或以上重叠 check_overlap
+    # 3a）笔长度 大于 min_bi_len6
+    # 3b) or笔长度 = min_bi_len6,未合并k线>=7
+    # 3c）or笔长度 <= min_bi_len6, 笔之间有3K或以上重叠 check_cdk,参数用bars_a去头去尾=bars_a[1:-1],
+    # (len(bars_a) <= min_bi_len 这里必须用 <= 不能用 < 不满足大于6k的反面是 <= 否则会报错
     # 或 当前笔的涨跌幅已经够大,不使用
-    should_execute = (not ab_include) and (not area_include) and (
-            (len(bars_a) > min_bi_len and len(bars_ar) >= 7) or
-            (len(bars_a) == min_bi_len and len(bars_ar) >= 7) or
-            (len(bars_a) < min_bi_len and check_overlap(bars_ar) >= 3)
-    )
+    # flag1 = (len(bars_a) > min_bi_len)
+    # flag2 = (len(bars_a) == min_bi_len and len(bars_ar) >= 7)
+    # flag3 = (len(bars_a) <= min_bi_len and has_cdk)
+    flag_bi = (len(bars_a) > min_bi_len) or \
+            (len(bars_a) == min_bi_len and len(bars_ar) >= 7) or \
+              (len(bars_a) <= min_bi_len and has_cdk)
 
-    if should_execute:
+    condition = (not ab_include) and (not area_include) and flag_bi
+    # condition = (not ab_include) and (len(bars_a) >= min_bi_len)
+    # 笔步骤3 条件满足，生成笔对象实例bi，将两端分型中包含的所有分型放入笔的fxs，所有k线放入笔的bars，根据起点分型设置笔方向
+    if condition:
     # if (not ab_include) and (len(bars_a) >= min_bi_len or power_enough):
+        logger.info(f"笔步骤3-k线范围{bars[0].dt, bars[-1].dt}, 笔范围{fx_a.dt, fx_b.dt}, 分型范围{fx_a.dt,fx_b.dt}, 笔识别{not ab_include, not area_include, flag_bi, len(bars_a), len(bars_ar), has_cdk}")
         fxs_ = [x for x in fxs if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
         bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
 
+        # 笔步骤3a bi后k线低中低 低于bi的最低点，和 高中高 高于bi的最高点，则笔不成立
+        # 为什么会出现：fx_a fx_b 出现后，k还在上涨或下跌，但是未出现新的分型 导致目前的笔失败，但是未来可能会出现新的分型。
         low_ubi = min([x.low for x in bars_b])
         high_ubi = max([x.high for x in bars_b])
         if (bi.direction == Direction.Up and high_ubi > bi.high) \
                 or (bi.direction == Direction.Down and low_ubi < bi.low):
+            logger.info(f"笔步骤3a 笔被破坏-{bars[-1].dt, bi.fx_a.dt, bi.fx_b.dt, high_ubi, bi.high, low_ubi, bi.low}")
             return None, bars
         else:
             return bi, bars_b
     else:
         return None, bars
 
-def check_overlap(bars: list[RawBar]):
-    # 存放结果
-    res = []
-    pre = None
-    temp = None
+def check_cdk(bars: List[RawBar]):
+    cdk_list = []
+    pre_bar = None
+    pre_cdk = None
+
     for bar in bars:
-        if pre:
-            temp = NewBar()
+        if not pre_bar:     # 第一个bar的时候pre_bar为空，向下取
+            pre_bar = bar
+        else:
+            # if isinstance(pre, RawBar):   # 这个无法判断，不知道原因；如果pre是RawBar，说明重叠已经断开，或者还没有重叠
+            if not pre_cdk: # pre_bar有值，pre_cdk 没有值，循环比较2k，找出重叠的k，写入 pre_cdk
+                minh = min(pre_bar.high, bar.high)
+                maxl = max(pre_bar.low, bar.low)
+                if minh >= maxl:
+                    pre_cdk = CDK(sdt=pre_bar.dt, edt=bar.dt, high=minh, low=maxl, kcnt=2, elements=(pre_bar, bar))
+                    # logger.info(f"发现2k重叠{pre_cdk.kcnt,pre_cdk.sdt,pre_cdk.edt}")
+                else:
+                    pre_bar = bar
+            # elif isinstance(pre, CDK):    # 这个无法判断，不知道原因 如果pre是CDK，说明已经有重叠了，重叠和bar比较
+            elif pre_cdk:   # pre_cdk 有值，循环比较pre_cdk和bar，找出重叠的k，更新 pre_cdk
+                minh = min(pre_cdk.high, bar.high)
+                maxl = max(pre_cdk.low, bar.low)
+                if minh >= maxl:
+                    pre_cdk.edt = bar.dt
+                    pre_cdk.high = minh
+                    pre_cdk.low = maxl
+                    pre_cdk.kcnt += 1
+                    pre_cdk.elements += (bar,)
+                    # logger.info(f"发现nk重叠{pre_cdk.kcnt, pre_cdk.sdt, pre_cdk.edt}")
+                else:   # 如果找不出重叠，且kcnt>=3 pre_cdk加入列表； 然后清空pre_cdk，赋值pre_bar 寻找新的重叠
+                    if pre_cdk.kcnt >= 3:
+                        cdk_list.append(pre_cdk)
+                        # logger.info(f"记录nk重叠{pre_cdk.kcnt, pre_cdk.sdt, pre_cdk.edt}")
+                    pre_cdk = None
+                    pre_bar = bar
+
+    if len(cdk_list)>0:
+        return True, cdk_list
+    else:
+        return False, []
 
 class CZSC:
     def __init__(self,
@@ -254,6 +302,7 @@ class CZSC:
         self.bars_raw: List[RawBar] = []  # 原始K线序列
         self.bars_ubi: List[NewBar] = []  # 未完成笔的无包含K线序列
         self.bi_list: List[BI] = []
+        self.cdk_list: List[CDK] = []
         self.symbol = bars[0].symbol
         self.freq = bars[0].freq
         self.get_signals = get_signals
@@ -267,13 +316,12 @@ class CZSC:
 
     def __update_bi(self):
         bars_ubi = self.bars_ubi
-        # logger.info(f"更新笔，第一条k线：{bars_ubi[-1].dt}")
         if len(bars_ubi) < 3:
             return
 
         # 查找笔
         if not self.bi_list:
-            # 第一笔的查找, 笔列表为空
+            # 全笔步骤1 获取目前 k线中的所有分型，找出跟第一个分型同类型的极值，作为起点（极大或极小）
             fxs = check_fxs(bars_ubi)
 
             if not fxs:
@@ -289,18 +337,20 @@ class CZSC:
                         or (fx_a.mark == Mark.G and fx.high >= fx_a.high):
                     fx_a = fx
 
+            # logger.info(f"全笔步骤1a-起始k线为{bars_ubi[-1].dt},起始分型为{fx_a.dt}")
             # 从分型最高或最低点开始获取k线
             bars_ubi = [x for x in bars_ubi if x.dt >= fx_a.elements[0].dt]
 
+            # 全笔步骤2 从 fx_a开始找到第一笔，成笔则更新 self.bars_ubi
             bi, bars_ubi_ = check_bi(bars_ubi)
             if isinstance(bi, BI):
                 self.bi_list.append(bi)
-                logger.info(f"找到一笔:{bi.fx_a.dt, bi.fx_b.dt},剩余k线{bars_ubi_[0].dt}")
+                # logger.info(f"找到一笔:{bi.fx_a.dt, bi.fx_b.dt},剩余k线{bars_ubi_[0].dt}")
             # 成笔以后 bars_ubi去掉笔的k线
             self.bars_ubi = bars_ubi_
             return
 
-
+        # 打印未完成笔的k线数
         if self.verbose and len(bars_ubi) > 100:
             logger.info(f"{self.symbol} - {self.freq} - {bars_ubi[-1].dt} 未完成笔延伸数量: {len(bars_ubi)}")
 
@@ -311,19 +361,19 @@ class CZSC:
 
         benchmark = None
 
-        # 成笔以后 bars_ubi去掉笔的k线
+        # 全笔步骤3 再找下一笔，成笔则加入笔列表；更新self.bars_ubi
         bi, bars_ubi_ = check_bi(bars_ubi, benchmark)
         self.bars_ubi = bars_ubi_
         if isinstance(bi, BI):
             self.bi_list.append(bi)
-            logger.info(f"找到一笔:{bi.fx_a.dt, bi.fx_b.dt},剩余k线{bars_ubi_[0].dt}")
+            # logger.info(f"找到一笔:{bi.fx_a.dt, bi.fx_b.dt},剩余k线{bars_ubi_[0].dt}")
 
-        # 后处理：如果当前笔被破坏，将当前笔的bars与bars_ubi进行合并，并丢弃
+        # 全笔步骤4：如果当前笔被破坏，丢弃当前bi，将当前笔的bars与bars_ubi进行合并
         last_bi = self.bi_list[-1]
         bars_ubi = self.bars_ubi
         if (last_bi.direction == Direction.Up and bars_ubi[-1].high > last_bi.high) \
                 or (last_bi.direction == Direction.Down and bars_ubi[-1].low < last_bi.low):
-            logger.info(f"笔{last_bi.fx_b.dt}被k线{self.bars_ubi[-1].dt}破坏，bars_ubi的k线从{last_bi.bars[0].dt,last_bi.bars[-1].dt}开始加回来")
+            logger.info(f"全笔步骤4-k线范围{bars_ubi[0].dt,bars_ubi[-1].dt}, 笔范围{last_bi.fx_a.dt, last_bi.fx_b.dt} 被k线-{self.bars_ubi[-1].dt}-破坏，bars_ubi的k线从{last_bi.bars[1].dt,last_bi.bars[-2].dt}开始加回来")
             self.bars_ubi = last_bi.bars[:-1] + [x for x in bars_ubi if x.dt >= last_bi.bars[-1].dt]
             self.bi_list.pop(-1)
 

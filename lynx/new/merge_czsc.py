@@ -140,10 +140,13 @@ def main():
 
     # test_merge(n_bars)
     # test_fx(n_bars)
-    test_bi(n_bars)
+    # test_bi(n_bars)
+    # test_cdk(bars)
+    # test_cdk(n_bars)
 
     # bi, bars_b = check_bi(n_bars[-40:])
     # 在echart中展示
+    # show(n_bars)
     show(bars)
 
     # 在streamlit中展示
@@ -156,7 +159,7 @@ def main():
     # res2 = get_bars_list(dc, symbols)
 
 
-def test_fx(bars: list[NewBar]) -> list[FX]:
+def test_fx(bars: List[NewBar]) -> List[FX]:
     fxs = check_fxs(bars)
 
     gao, di = 0,0
@@ -172,10 +175,17 @@ def test_fx(bars: list[NewBar]) -> list[FX]:
     # 查看发现5.12明显不是底分型
     return fxs
 
-def test_bi(bars: list[NewBar]) -> list[FX]:
+def test_bi(bars: List[NewBar]) -> List[BI]:
     bi_list=[]
 
 
+def test_cdk(bars):
+    print('开始测试重叠区计算函数')
+    has_cd, cdks = check_cdk(bars)
+    if has_cd:
+        print('发现重叠区域%d组:' %len(cdks))
+        for cdk in cdks:
+            print(cdk.kcnt, cdk.sdt, cdk.edt, cdk.high,cdk.low)
 # 展示k线
 def show(bars):
     # 在echart中展示

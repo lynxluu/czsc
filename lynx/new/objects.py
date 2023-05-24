@@ -77,7 +77,14 @@ class NewBar:
     def raw_bars(self):
         return self.elements
 
-
+@dataclass
+class CDK:
+    sdt: datetime
+    edt: datetime
+    high: [float, int]
+    low: [float, int]
+    kcnt: int
+    elements: List = None
 @dataclass
 class FX:
     symbol: str
