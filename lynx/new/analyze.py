@@ -12,6 +12,7 @@ import numpy as np
 from loguru import logger
 from typing import List, Callable
 from collections import OrderedDict
+
 from czsc.enum import Mark, Direction
 # from czsc.objects import BI, FX, RawBar, NewBar
 from objects import BI, FX, RawBar, NewBar,CDK
@@ -20,7 +21,9 @@ from czsc import envs
 
 # logger.disable('analyze')
 
-
+def tostr(dt):
+    date_str = dt.strftime('%Y-%m-%d')
+    return date_str
 def remove_include(k1: NewBar, k2: NewBar, k3: RawBar):
     """去除包含关系：输入三根k线，其中k1和k2为没有包含关系的K线，k3为原始K线"""
     if k1.high < k2.high:
@@ -170,7 +173,8 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
         logger.exception("笔识别错误")
         return None, bars
 
-    # logger.info(f"笔步骤1a- K线范围-{bars[0].dt,bars[-1].dt},分型范围{fx_a.dt,fx_b.dt}")
+    logger.info(f"-------笔步骤1a- K线范围-{tostr(bars[0].dt),tostr(bars[-1].dt)}")
+    # logger.info(f"-------笔步骤1b- 分型范围{tostr(fx_a.dt), tostr(fx_b.dt)}")
     # 打印 找出的 fx_a和 fx_b
     # logger.info(f"{len(fxs),fx_a.dt, fx_b.dt}")
 
@@ -227,7 +231,8 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     # 笔步骤3 条件满足，生成笔对象实例bi，将两端分型中包含的所有分型放入笔的fxs，所有k线放入笔的bars，根据起点分型设置笔方向
     if condition:
     # if (not ab_include) and (len(bars_a) >= min_bi_len or power_enough):
-        logger.info(f"笔步骤3-k线范围{bars[0].dt, bars[-1].dt}, 笔范围{fx_a.dt, fx_b.dt}, 分型范围{fx_a.dt,fx_b.dt}, 笔识别{not ab_include, not area_include, flag_bi, len(bars_a), len(bars_ar), has_cdk}")
+        logger.info(f"笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not ab_include, not area_include, flag_bi, len(bars_a), len(bars_ar), has_cdk}")
+        # logger.info(f"笔步骤3-k线范围{bars[0].dt, bars[-1].dt}, 分型范围{fx_a.dt, fx_b.dt}")
         fxs_ = [x for x in fxs if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
         bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
 
@@ -237,10 +242,11 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
         high_ubi = max([x.high for x in bars_b])
         if (bi.direction == Direction.Up and high_ubi > bi.high) \
                 or (bi.direction == Direction.Down and low_ubi < bi.low):
-            logger.info(f"笔步骤3a 笔被破坏-{bars[-1].dt, bi.fx_a.dt, bi.fx_b.dt, high_ubi, bi.high, low_ubi, bi.low}")
+            logger.info(f"笔步骤3a 笔被破坏-{tostr(bars[-1].dt)} ,高点：{high_ubi, bi.high}, 低点：{low_ubi, bi.low}")
             return None, bars
         else:
             return bi, bars_b
+        # return bi, bars_b
     else:
         return None, bars
 
@@ -373,7 +379,8 @@ class CZSC:
         bars_ubi = self.bars_ubi
         if (last_bi.direction == Direction.Up and bars_ubi[-1].high > last_bi.high) \
                 or (last_bi.direction == Direction.Down and bars_ubi[-1].low < last_bi.low):
-            logger.info(f"全笔步骤4-k线范围{bars_ubi[0].dt,bars_ubi[-1].dt}, 笔范围{last_bi.fx_a.dt, last_bi.fx_b.dt} 被k线-{self.bars_ubi[-1].dt}-破坏，bars_ubi的k线从{last_bi.bars[1].dt,last_bi.bars[-2].dt}开始加回来")
+            logger.info(f"全笔步骤4-笔范围{tostr(last_bi.fx_a.dt), tostr(last_bi.fx_b.dt)} 被k线-{tostr(self.bars_ubi[-1].dt)}-破坏")
+            # logger.info(f"k线范围{tostr(bars_ubi[0].dt),tostr(bars_ubi[-1].dt)},bars_ubi的k线从{tostr(last_bi.bars[1].dt),tostr(last_bi.bars[-2].dt)}开始加回来")
             self.bars_ubi = last_bi.bars[:-1] + [x for x in bars_ubi if x.dt >= last_bi.bars[-1].dt]
             self.bi_list.pop(-1)
 
