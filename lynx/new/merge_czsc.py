@@ -13,7 +13,7 @@ from analyze import *
 from display import *
 
 DEBUG = 0
-
+dc = TsDataCache(data_path=r"D:\ts_data", refresh=True)
 
 def is_contained(k1, k2):
     if k1.high >= k2.high and k1.low <= k2.low or k1.high <= k2.high and k1.low >= k2.low:
@@ -113,6 +113,29 @@ def get_bars(dc, symbol):
     return bars
 
 
+def get_bars2(dc, symbol):
+    symbol_ = symbol.split('#')
+    if len(symbol_) == 1:
+        ts_code, asset = symbol_[0], 'E'
+    elif len(symbol_) == 2:
+        ts_code, asset = symbol_
+
+    adj = 'qfq'
+
+    today = dt.datetime.now()
+    edt = today.strftime('%Y%m%d')
+    sdt = '20200101'
+
+    bars = dc.pro_bar_minutes(ts_code=ts_code, asset=asset, freq='15min', adj='qfq', sdt=sdt, edt=edt)
+    freqs = ['15分钟', '30分钟', '日线', '周线']
+
+    counts = 100
+    bg = BarGenerator(base_freq=freqs[0], freqs=freqs[1:], max_count=500)
+
+    for bar in bars[:-counts]:
+        bg.update(bar)
+
+    return bars
 def get_bars_list(dc, symbols):
     res = []
     for symbol in symbols:
@@ -122,18 +145,40 @@ def get_bars_list(dc, symbols):
     return res
 
 
+def get_bars_list2(dc, symbols):
+    res = []
+    for symbol in symbols:
+        # symbol, asset = each.split('#')
+        print(symbol, end=' ')
+        res.append(get_bars2(dc, symbol))
+    return res
+
 def main():
     global DEBUG
     DEBUG = 2
     # 初始化 Tushare 数据缓存
-    dc = TsDataCache(data_path=r"D:\ts_data", refresh=True)
+    # dc = TsDataCache(data_path=r"D:\ts_data", refresh=True)
 
+    single()
+
+
+def single():
     # # 处理单个代码
     # # 000905.SH  000016.SH  512880.SH 688981.SH  000999.SZ  002624.SZ
     # symbol = '688111.SH#E'
     symbol = '000932.SH#I'
-    bars = get_bars(dc, symbol)[-100:]
-    n_bars = merge_bars(bars)
+    # bars = get_bars(dc, symbol)[-100:]
+    # n_bars = merge_bars(bars)
+
+    # 使用15f 批量生成 30f 日线 周线
+    bars = get_bars2(dc, symbol)
+    print(type(bars))
+    freqs = ['30min', '60', 'D']
+    # for freq in freqs:
+    #     bars_f = bars[bars['freq'] == freq][-200:]
+    #     n_bars = merge_bars(bars_f)
+    #     show(n_bars)
+    # print(len(bars2))
 
     # for bar in n_bars[-20:]:
     #     print(bar.dt)
@@ -146,17 +191,19 @@ def main():
 
     # bi, bars_b = check_bi(n_bars[-40:])
     # 在echart中展示
-    # show(n_bars)
-    show(bars)
+    show(n_bars)
+    # show(bars)
 
     # 在streamlit中展示
     # displayD(symbol, bars)
 
-    # # 处理批量代码
-    # symbols = get_symbols(dc, step='index')[:3]
-    # symbols = symbols = ['688111.SH','688981.SH','600436.SH','600129.SH','000999.SZ',\
-    #                  '002624.SZ','300223.SZ','301308.SZ','515880.SH#FD', '512980.SH#FD']
-    # res2 = get_bars_list(dc, symbols)
+def multi():
+    # 处理批量代码
+    # # symbols = get_symbols(dc, step='index')[:3]
+    symbols = ['688111.SH','688981.SH','600436.SH','600129.SH','000999.SZ',\
+                     '002624.SZ','300223.SZ','301308.SZ','515880.SH#FD', '512980.SH#FD']
+    res2 = get_bars_list2(dc, symbols)
+    print(len(res2))
 
 
 def test_fx(bars: List[NewBar]) -> List[FX]:
