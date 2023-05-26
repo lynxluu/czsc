@@ -82,33 +82,24 @@ def merge_bars(bars):
     return n_bars
 
 
-def get_bars(dc, symbol):
+def get_bars(dc, symbol, freq='D', limit=500):
     symbol_ = symbol.split('#')
     if len(symbol_) == 1:
         ts_code, asset = symbol_[0], 'E'
     elif len(symbol_) == 2:
         ts_code, asset = symbol_
 
-    freq = 'D'
-    adj = 'qfq'
-
-    today = dt.datetime.now()
-    edt = today.strftime('%Y%m%d')
+    # now = dt.datetime.now()
+    # edt = now.strftime(dt_fmt)
     sdt = '20200101'
 
-    try:
-        bars = dc.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
-                          start_date=sdt, end_date=edt, raw_bar=True)
+    if 'min' in freq:
+        bars = dc.pro_bar_minutes(ts_code=ts_code, asset=asset, adj='qfq', freq=freq,
+                                  sdt=sdt, edt=None, raw_bar=True, limit=limit)
 
-    except Exception as e:
-        # 股票代码不正确，或其他原因导致bar 为空
-        print("获取 %s k线数据失败：" % ts_code)
-        # tb = traceback.extract_tb(e.__traceback__)
-        # traceback.print_exc()
-        return None
-
-    if DEBUG >= 3:
-        print(bars[0])
+    else:
+        bars = dc.pro_bar(ts_code=ts_code, asset=asset, adj='qfq', freq=freq,
+                          start_date=sdt, end_date=None, raw_bar=True, limit=limit)
 
     return bars
 
@@ -159,43 +150,53 @@ def main():
     # 初始化 Tushare 数据缓存
     # dc = TsDataCache(data_path=r"D:\ts_data", refresh=True)
 
-    single()
-
-
-def single():
     # # 处理单个代码
     # # 000905.SH  000016.SH  512880.SH 688981.SH  000999.SZ  002624.SZ
+    ## 300649.SZ 杭州园林  000932.SH#I 全指消费 000858.SZ 五粮液
     # symbol = '688111.SH#E'
-    symbol = '000932.SH#I'
-    # bars = get_bars(dc, symbol)[-100:]
-    # n_bars = merge_bars(bars)
+    symbol = '000001.SH#I'
 
-    # 使用15f 批量生成 30f 日线 周线
-    bars = get_bars2(dc, symbol)
-    print(type(bars))
-    freqs = ['30min', '60', 'D']
-    # for freq in freqs:
-    #     bars_f = bars[bars['freq'] == freq][-200:]
-    #     n_bars = merge_bars(bars_f)
-    #     show(n_bars)
-    # print(len(bars2))
+    # single('600903.SH','15min')
+    single('000001.SH','15min')
+    # single_3l(symbol)
 
-    # for bar in n_bars[-20:]:
-    #     print(bar.dt)
+def single(symbol, freq):
+
+    # bars = get_bars(dc, symbol,)
+    bars = get_bars(dc, symbol, freq)
+    n_bars = merge_bars(bars)
+
+    # 在echart中展示
+    # show(n_bars)
+    if bars:
+        show(bars)
 
     # test_merge(n_bars)
     # test_fx(n_bars)
     # test_bi(n_bars)
     # test_cdk(bars)
-    # test_cdk(n_bars)
+    test_cdk(n_bars)
 
     # bi, bars_b = check_bi(n_bars[-40:])
-    # 在echart中展示
-    show(n_bars)
-    # show(bars)
+
 
     # 在streamlit中展示
     # displayD(symbol, bars)
+
+    # for bar in n_bars[-20:]:
+    #     print(bar.dt)
+
+
+def single_3l(symbol):
+    # 使用15f 批量生成 30f 日线 周线
+    # symbol = '688111.SH#E'
+    freqs = ['5min', '30min', 'D']
+
+    for freq in freqs:
+        bars = get_bars(dc, symbol,freq)
+        n_bars = merge_bars(bars)
+        show(n_bars)
+
 
 def multi():
     # 处理批量代码
@@ -232,13 +233,13 @@ def test_cdk(bars):
     if has_cd:
         print('发现重叠区域%d组:' %len(cdks))
         for cdk in cdks:
-            print(cdk.kcnt, cdk.sdt, cdk.edt, cdk.high,cdk.low)
+            print("重叠k线数：",cdk.kcnt, "起止范围：",cdk.sdt, cdk.edt, "重叠区域：",cdk.low, cdk.high)
 # 展示k线
 def show(bars):
     # 在echart中展示
     cs = CZSC(bars)
-    cs.to_echarts(width='1200px', height='560px')
-    cs.open_in_browser(width='1200px', height='560px')
+    cs.to_echarts(width='1400px', height='560px')
+    cs.open_in_browser(width='1400px', height='560px')
 
 if __name__ == '__main__':
     main()

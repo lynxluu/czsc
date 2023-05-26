@@ -21,8 +21,9 @@ from czsc import envs
 
 # logger.disable('analyze')
 
+dt_fmt = "%Y-%m-%d %H:%M:%S"
 def tostr(dt):
-    date_str = dt.strftime('%Y-%m-%d')
+    date_str = dt.strftime(dt_fmt)
     return date_str
 def remove_include(k1: NewBar, k2: NewBar, k3: RawBar):
     """去除包含关系：输入三根k线，其中k1和k2为没有包含关系的K线，k3为原始K线"""
@@ -462,7 +463,16 @@ class CZSC:
         else:
             bi = None
             fx = None
-        chart = kline_pro(kline, bi=bi, fx=fx, width=width, height=height, bs=bs,
+
+        # 重叠区展示在k线图上
+        if len(self.cdk_list) > 0:
+            cdk = [{'dt1': x.sdt, 'dt2': x.edt, "low": x.low, "high": x.high} for x in self.cdk_list]
+        else:
+            cdk = None
+
+        # chart = kline_pro(kline, bi=bi, fx=fx, width=width, height=height, bs=bs,
+        #                   title="{}-{}".format(self.symbol, self.freq.value))
+        chart = kline_pro(kline, bi=bi, fx=fx, cdk=cdk, width=width, height=height, bs=bs,
                           title="{}-{}".format(self.symbol, self.freq.value))
         return chart
 

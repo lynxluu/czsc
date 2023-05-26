@@ -180,7 +180,7 @@ class TsDataCache:
             df.to_feather(file_cache)
         return df
 
-    def pro_bar(self, ts_code, start_date=None, end_date=None, freq='D', asset="E", adj='qfq', raw_bar=True):
+    def pro_bar(self, ts_code, start_date=None, end_date=None, freq='D', asset="E", adj='qfq', raw_bar=True, limit=None):
         """获取日线以上数据
 
         https://tushare.pro/document/2?doc_id=109
@@ -216,13 +216,17 @@ class TsDataCache:
             kline = kline[kline['trade_date'] >= pd.to_datetime(start_date)]
         if end_date:
             kline = kline[kline['trade_date'] <= pd.to_datetime(end_date)]
+        # 如果限制返回长度，执行限制
+        if limit:
+            kline = kline.tail(limit)
 
         kline.reset_index(drop=True, inplace=True)
         if raw_bar:
             kline = format_kline(kline, freq=self.freq_map[freq])
         return kline
 
-    def pro_bar_minutes(self, ts_code, sdt=None, edt=None, freq='60min', asset="E", adj=None, raw_bar=True):
+    # def pro_bar_minutes(self, ts_code, sdt=None, edt=None, freq='60min', asset="E", adj=None, raw_bar=True,):
+    def pro_bar_minutes(self, ts_code, sdt=None, edt=None, freq='60min', asset="E", adj=None, raw_bar=True, limit=None):
         """获取分钟线
 
         https://tushare.pro/document/2?doc_id=109
@@ -250,6 +254,8 @@ class TsDataCache:
             dt1 = pd.to_datetime(self.sdt)
             delta = timedelta(days=20*int(freq.replace("min", "")))
             dt2 = dt1 + delta
+            # 打印分段时间间隔
+            # print(dt1,dt2,int(freq.replace("min", "")),delta)
             while dt1 < end_dt:
                 df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq,
                                 start_date=dt1.strftime(dt_fmt), end_date=dt2.strftime(dt_fmt))
@@ -320,6 +326,9 @@ class TsDataCache:
             kline = kline[kline['trade_time'] >= pd.to_datetime(sdt)]
         if edt:
             kline = kline[kline['trade_time'] <= pd.to_datetime(edt)]
+        # 如果限制返回数量，执行限制
+        if limit:
+            kline = kline.tail(limit)
 
         bars = kline.reset_index(drop=True)
         if raw_bar:
