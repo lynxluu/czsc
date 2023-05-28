@@ -89,17 +89,17 @@ def get_bars(dc, symbol, freq='D', limit=500):
     elif len(symbol_) == 2:
         ts_code, asset = symbol_
 
-    # now = dt.datetime.now()
-    # edt = now.strftime(dt_fmt)
+    now = dt.datetime.now()
+    edt = now.strftime(dt_fmt)
     sdt = '20200101'
 
     if 'min' in freq:
         bars = dc.pro_bar_minutes(ts_code=ts_code, asset=asset, adj='qfq', freq=freq,
-                                  sdt=sdt, edt=None, raw_bar=True, limit=limit)
+                                  sdt=sdt, edt=edt, raw_bar=True, limit=limit)
 
     else:
         bars = dc.pro_bar(ts_code=ts_code, asset=asset, adj='qfq', freq=freq,
-                          start_date=sdt, end_date=None, raw_bar=True, limit=limit)
+                          start_date=sdt, end_date=edt, raw_bar=True, limit=limit)
 
     return bars
 
@@ -156,8 +156,9 @@ def main():
     # symbol = '688111.SH#E'
     symbol = '000001.SH#I'
 
-    # single('600903.SH','15min')
-    single('000001.SH','15min')
+    single('600903.SH','15min')
+    # single('000001.SH','15min')
+    # single('000001.SH','D')
     # single_3l(symbol)
 
 def single(symbol, freq):
@@ -165,6 +166,7 @@ def single(symbol, freq):
     # bars = get_bars(dc, symbol,)
     bars = get_bars(dc, symbol, freq)
     n_bars = merge_bars(bars)
+    test_cdk(n_bars)
 
     # 在echart中展示
     # show(n_bars)
@@ -175,7 +177,7 @@ def single(symbol, freq):
     # test_fx(n_bars)
     # test_bi(n_bars)
     # test_cdk(bars)
-    test_cdk(n_bars)
+
 
     # bi, bars_b = check_bi(n_bars[-40:])
 

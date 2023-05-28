@@ -19,7 +19,7 @@ from objects import BI, FX, RawBar, NewBar,CDK
 from czsc.utils.echarts_plot import kline_pro
 from czsc import envs
 
-# logger.disable('analyze')
+logger.disable('analyze')
 
 dt_fmt = "%Y-%m-%d %H:%M:%S"
 def tostr(dt):
@@ -470,6 +470,7 @@ class CZSC:
         else:
             cdk = None
 
+        print("检查是否输出了重叠k区域",len(cdk), cdk[0])
         # chart = kline_pro(kline, bi=bi, fx=fx, width=width, height=height, bs=bs,
         #                   title="{}-{}".format(self.symbol, self.freq.value))
         chart = kline_pro(kline, bi=bi, fx=fx, cdk=cdk, width=width, height=height, bs=bs,

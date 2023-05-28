@@ -334,34 +334,20 @@ def kline_pro(kline: List[dict],
 
     from pyecharts.charts import Candlestick
 
+    # 设置重叠K区域的显示
     if cdk:
-        cdk_dts = [x['dt1'] for x in cdk]
-        cdk_val = [round(x['low'], 2) for x in cdk]
+        print("重叠区检测",len(cdk),cdk[0])
+        for x in cdk:
+            cdk_dts = [x['dt1'], x['dt2'], x['dt2'], x['dt1'], x['dt1']]
+            cdk_val = [x['low'], x['low'], x['high'], x['high'], x['low']]
 
-        chart_cdk = Candlestick()
-        chart_cdk.add_xaxis(cdk_dts)
-        chart_cdk.add_yaxis(series_name="重叠区", y_axis=cdk_val, is_selected=True,
-                          itemstyle_opts=opts.ItemStyleOpts(color="#ec0000", color0="#00da3c"),
-                          label_opts=label_show_opts, )
-
-        # 绘制重叠区矩形
-        for c in cdk:
-            rect = opts.GraphicGroup()
-            rect.add(
-                opts.GraphicRect(
-                    shape=opts.ShapeType.RECT,
-                    x=c['dt1'],
-                    y=c['low'],
-                    width=c['dt2'] - c['dt1'],
-                    height=c['high'] - c['low'],
-                    graphic_basicstyle_opts=opts.GraphicBasicStyleOpts(
-                        fill="#ccc", opacity=0.3, stroke="#ccc", stroke_width=1
-                    ),
-                )
-            )
-            chart_cdk.add_js_funcs(rect.render())
-        chart_cdk.set_global_opts(xaxis_opts=grid0_xaxis_opts, legend_opts=legend_not_show_opts)
-        chart_k = chart_k.overlap(chart_cdk)
+            chart_cdk = Line()
+            chart_cdk.add_xaxis(cdk_dts)
+            chart_cdk.add_yaxis(series_name="重叠区", y_axis=cdk_val, is_selected=True,
+                                label_opts=opts.LabelOpts(is_show=False),
+                                linestyle_opts=opts.LineStyleOpts(color="red"), )
+            chart_cdk.set_global_opts(xaxis_opts=grid0_xaxis_opts, legend_opts=legend_not_show_opts)
+            chart_k = chart_k.overlap(chart_cdk)
 
     if xd:
         xd_dts = [x['dt'] for x in xd]
