@@ -1,19 +1,7 @@
-# import pip as ts
-# from datetime import datetime
 import datetime
-
-import akshare as ak
 import tushare as ts
 import pandas as pd
-# from czsc.traders.base import CzscSignals, BarGenerator
-# from czsc.utils import freqs_sorted
-from czsc.data import TsDataCache, get_symbols
-from czsc.analyze import *
-from czsc.enum import *
-import requests
-
-
-# from pandas import Timedelta
+# import requests
 
 
 def get_klines(symbol):
@@ -37,12 +25,11 @@ def get_klines(symbol):
 #
 
 def is_contained(k1, k2):
-    if k1['high'] >= k2['high'] and k1['low'] <= k2['low']:
-        return k1['dt']
-    elif k1['high'] <= k2['high'] and k1['low'] >= k2['low']:
+    if k1['high'] >= k2['high'] and k1['low'] <= k2['low'] or \
+         k1['high'] <= k2['high'] and k1['low'] >= k2['low']:
         return k1['dt']
     else:
-        return None
+        return False
 
 
 
