@@ -19,7 +19,7 @@ from objects import BI, FX, RawBar, NewBar,CDK
 from czsc.utils.echarts_plot import kline_pro
 from czsc import envs
 
-# logger.disable('analyze')
+logger.disable('analyze')
 
 dt_fmt = "%Y-%m-%d %H:%M:%S"
 def tostr(dt):
@@ -321,6 +321,19 @@ class CZSC:
     def __repr__(self):
         return "<CZSC~{}~{}>".format(self.symbol, self.freq.value)
 
+
+    def __update_cdk(self):
+        bars_ubi = self.bars_ubi
+        if len(bars_ubi) < 3:
+            return
+
+        if not self.cdk_list:
+            flag, cdk_list = check_cdk(bars_ubi)
+            if flag:
+                self.cdk_list += cdk_list
+
+
+
     def __update_bi(self):
         bars_ubi = self.bars_ubi
         if len(bars_ubi) < 3:
@@ -427,6 +440,9 @@ class CZSC:
         # if self.bars_ubi:
         #     logger.info(f"处理完包含的k线{len(self.bars_ubi),self.bars_ubi[0].dt, self.bars_ubi[-1].dt}")
 
+        # 更新重叠区
+        self.__update_cdk()
+
         # 更新笔
         self.__update_bi()
 
@@ -470,6 +486,7 @@ class CZSC:
         else:
             cdk = None
 
+        print("检查是否输出了重叠k区域",len(cdk), cdk[0])
         # chart = kline_pro(kline, bi=bi, fx=fx, width=width, height=height, bs=bs,
         #                   title="{}-{}".format(self.symbol, self.freq.value))
         chart = kline_pro(kline, bi=bi, fx=fx, cdk=cdk, width=width, height=height, bs=bs,
