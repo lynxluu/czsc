@@ -91,14 +91,14 @@ def check_fx(k1: NewBar, k2: NewBar, k3: NewBar):
         # fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.G, high=k2.high,
         #         low=k2.low, fx=k2.high, elements=[k1, k2, k3])
         fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.G, high=k2.high,
-                high_a=max(k1.high, k3.high), low_a=min(k1.low, k2.low),
+                high_a=k2.high, low_a=min(k1.low, k2.low),
                 low=k2.low, fx=k2.high, elements=[k1, k2, k3])
 
     if k1.low > k2.low < k3.low and k1.high > k2.high < k3.high:
         # fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.D, high=k2.high,
         #         low=k2.low, fx=k2.low, elements=[k1, k2, k3])
         fx = FX(symbol=k1.symbol, dt=k2.dt, mark=Mark.D, high=k2.high,
-                high_a=max(k1.high, k3.high), low_a=min(k1.low, k2.low),
+                high_a=max(k1.high, k3.high), low_a=k2.low,
                 low=k2.low, fx=k2.low, elements=[k1, k2, k3])
 
     return fx
@@ -197,8 +197,9 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
 
 
     # 判断fx_a的区间和fx_b的区间是否存在包含关系
-    # area_include = (fx_a.high_a > fx_b.high_a and fx_a.low_a < fx_b.low_a) \
-    #                or (fx_a.high_a < fx_b.high_a and fx_a.low_a > fx_b.low_a)
+    # 改写了这个顶分的高点=fx点的high，低点是两外两根k的最低点， 底分的低点=fx点的low， 高点时另外两根k的最高点
+    area_include = (fx_a.high_a > fx_b.high_a and fx_a.low_a < fx_b.low_a) \
+                   or (fx_a.high_a < fx_b.high_a and fx_a.low_a > fx_b.low_a)
 
     area_include = None
 
@@ -227,7 +228,8 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
             (len(bars_a) == min_bi_len and len(bars_ar) >= 7) or \
               (len(bars_a) <= min_bi_len and has_cdk)
 
-    condition = (not ab_include) and (not area_include) and flag_bi
+    condition = (not area_include) and flag_bi
+    # condition = (not ab_include) and (not area_include) and flag_bi
     # condition = (not ab_include) and (len(bars_a) >= min_bi_len)
     # 笔步骤3 条件满足，生成笔对象实例bi，将两端分型中包含的所有分型放入笔的fxs，所有k线放入笔的bars，根据起点分型设置笔方向
     if condition:
@@ -251,10 +253,12 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     else:
         return None, bars
 
-def check_cdk(bars: List[RawBar]):
+
+# 输入一串k线，返回所有3k或3k以上的重叠列表
+def check_cdk(bars: List[RawBar], pre_bar=None, pre_cdk=None):
     cdk_list = []
-    pre_bar = None
-    pre_cdk = None
+    # pre_bar = None
+    # pre_cdk = None
 
     for bar in bars:
         if not pre_bar:     # 第一个bar的时候pre_bar为空，向下取
@@ -290,7 +294,7 @@ def check_cdk(bars: List[RawBar]):
     if len(cdk_list)>0:
         return True, cdk_list
     else:
-        return False, []
+        return False, cdk_list
 
 class CZSC:
     def __init__(self,
@@ -331,6 +335,10 @@ class CZSC:
             flag, cdk_list = check_cdk(bars_ubi)
             if flag:
                 self.cdk_list += cdk_list
+        else:
+            pre_cdk = self.cdk_list[-1]
+            pre_bar = None
+            flag, cdk_list = check_cdk(bars_ubi, pre_bar, pre_cdk)
 
 
 
@@ -381,7 +389,7 @@ class CZSC:
 
         benchmark = None
 
-        # 全笔步骤3 再找下一笔，成笔则加入笔列表；更新self.bars_ubi
+        # 全笔步骤3 找满足benchmark条件的下一笔，成笔则加入笔列表；更新self.bars_ubi
         bi, bars_ubi_ = check_bi(bars_ubi, benchmark)
         self.bars_ubi = bars_ubi_
         if isinstance(bi, BI):
