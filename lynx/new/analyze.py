@@ -19,9 +19,10 @@ from objects import BI, FX, RawBar, NewBar,CDK
 from czsc.utils.echarts_plot import kline_pro
 from czsc import envs
 
-logger.disable('analyze')
+# logger.disable('analyze')
+logger.level('ERROR')
 
-dt_fmt = "%Y-%m-%d %H:%M:%S"
+dt_fmt = "%Y%m%d:%H%M"
 def tostr(dt):
     date_str = dt.strftime(dt_fmt)
     return date_str
@@ -181,13 +182,13 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
 
     # 笔步骤2 计算nk和重叠k
     # bars是合并过的k线，bars_a 计算fx_a左侧--fx_b右侧 范围内的合并k线
-    # bars_ar 计算fx_a左侧--fx_b右侧的未合并k线
+    # bars_ar 计算fx_a顶点--fx_b顶点的未合并k线
     # bars_b fx_b左侧开始的合并k线
     bars_a = [x for x in bars if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
     bars_ar = []
     for x in bars_a:
         for y in x.elements:
-            if fx_a.elements[0].dt <= y.dt <= fx_b.elements[2].dt:
+            if fx_a.elements[1].dt <= y.dt <= fx_b.elements[1].dt:
                 bars_ar.append(y)
     bars_b = [x for x in bars if x.dt >= fx_b.elements[0].dt]
 
@@ -201,10 +202,12 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     area_include = (fx_a.high_a > fx_b.high_a and fx_a.low_a < fx_b.low_a) \
                    or (fx_a.high_a < fx_b.high_a and fx_a.low_a > fx_b.low_a)
 
-    area_include = None
+    # area_include = None
 
-    # 计算重叠k线
-    has_cdk, cdk_list = check_cdk(bars_a[1:-1])
+    # 计算重叠k线, 从去包含的k线计算
+    # has_cdk, cdk_list = check_cdk(bars_a[1:-1])
+    # 从原始k线计算,分型顶点不能算，所以
+    cdks, bars_c = check_cdk(bars_ar[1:-1])
 
     # # 判断当前笔的涨跌幅是否超过benchmark的一定比例
     # if benchmark and abs(fx_a.fx - fx_b.fx) > benchmark * envs.get_bi_change_th():
@@ -226,7 +229,7 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     # flag3 = (len(bars_a) <= min_bi_len and has_cdk)
     flag_bi = (len(bars_a) > min_bi_len) or \
             (len(bars_a) == min_bi_len and len(bars_ar) >= 7) or \
-              (len(bars_a) <= min_bi_len and has_cdk)
+              (len(bars_a) <= min_bi_len and len(cdks))
 
     condition = (not area_include) and flag_bi
     # condition = (not ab_include) and (not area_include) and flag_bi
@@ -234,7 +237,7 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
     # 笔步骤3 条件满足，生成笔对象实例bi，将两端分型中包含的所有分型放入笔的fxs，所有k线放入笔的bars，根据起点分型设置笔方向
     if condition:
     # if (not ab_include) and (len(bars_a) >= min_bi_len or power_enough):
-        logger.info(f"笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not ab_include, not area_include, flag_bi, len(bars_a), len(bars_ar), has_cdk}")
+        logger.info(f"笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not ab_include, not area_include, flag_bi, len(bars_a), len(bars_ar), len(cdks)}")
         # logger.info(f"笔步骤3-k线范围{bars[0].dt, bars[-1].dt}, 分型范围{fx_a.dt, fx_b.dt}")
         fxs_ = [x for x in fxs if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
         bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
@@ -255,8 +258,8 @@ def check_bi(bars: List[NewBar], benchmark: float = None):
 
 
 # 输入一串k线，返回所有3k或3k以上的重叠列表
-def check_cdk(bars: List[RawBar], pre_bar=None, pre_cdk=None):
-    cdk_list = []
+def check_cdk(bars: List[RawBar], pre_cdk=None, pre_bar=None,):
+    cdks = []
     # pre_bar = None
     # pre_cdk = None
 
@@ -286,15 +289,17 @@ def check_cdk(bars: List[RawBar], pre_bar=None, pre_cdk=None):
                     # logger.info(f"发现nk重叠{pre_cdk.kcnt, pre_cdk.sdt, pre_cdk.edt}")
                 else:   # 如果找不出重叠，且kcnt>=3 pre_cdk加入列表； 然后清空pre_cdk，赋值pre_bar 寻找新的重叠
                     if pre_cdk.kcnt >= 3:
-                        cdk_list.append(pre_cdk)
+                        cdks.append(pre_cdk)
                         # logger.info(f"记录nk重叠{pre_cdk.kcnt, pre_cdk.sdt, pre_cdk.edt}")
                     pre_cdk = None
                     pre_bar = bar
 
-    if len(cdk_list)>0:
-        return True, cdk_list
+    if len(cdks)>0:
+        bars_ = [x for x in bars if x.dt >= cdks[-1].edt]
     else:
-        return False, cdk_list
+        bars_ = bar
+
+    return cdks, bars_
 
 class CZSC:
     def __init__(self,
@@ -313,7 +318,8 @@ class CZSC:
         self.bars_raw: List[RawBar] = []  # 原始K线序列
         self.bars_ubi: List[NewBar] = []  # 未完成笔的无包含K线序列
         self.bi_list: List[BI] = []
-        self.cdk_list: List[CDK] = []
+        self.bars_ucd: List[RawBar] = [] # 计算重叠区的k线序列
+        self.cdk_list: List[CDK] = [] # 重叠区域集合
         self.symbol = bars[0].symbol
         self.freq = bars[0].freq
         self.get_signals = get_signals
@@ -327,18 +333,27 @@ class CZSC:
 
 
     def __update_cdk(self):
-        bars_ubi = self.bars_ubi
-        if len(bars_ubi) < 3:
+        bars_ucd = self.bars_ucd
+        logger.error(f"cdk更新开始，cdk长度={len(self.cdk_list)},bars_ucd长度={len(self.bars_ucd),self.bars_ucd[-1].dt}")
+        if len(bars_ucd) < 3:
             return
 
         if not self.cdk_list:
-            flag, cdk_list = check_cdk(bars_ubi)
-            if flag:
-                self.cdk_list += cdk_list
+            cdks, bars_ucd_ = check_cdk(bars_ucd)
+            if cdks:
+                self.cdk_list += cdks
+                self.bars_ucd = bars_ucd_
+                logger.error(f"cdk_list为空，cdk长度={len(self.cdk_list)},bars_ucd长度={len(bars_ucd)},CDK={self.cdk_list[-1].kcnt, self.cdk_list[-1].sdt,self.cdk_list[-1].edt}")
         else:
             pre_cdk = self.cdk_list[-1]
-            pre_bar = None
-            flag, cdk_list = check_cdk(bars_ubi, pre_bar, pre_cdk)
+            cdks, bars_ucd_ = check_cdk(bars_ucd, pre_cdk)
+            if cdks:
+                if cdks[0].sdt == pre_cdk.sdt:
+                    self.cdk_list.pop(-1)
+                    self.bars_ucd = bars_ucd_
+                self.cdk_list += cdks
+                logger.error(f"cdk_list不为空，cdk长度={len(self.cdk_list)},bars_ucd长度={len(bars_ucd)},CDK={self.cdk_list[-1].kcnt, self.cdk_list[-1].sdt,self.cdk_list[-1].edt}")
+
 
 
 
@@ -449,6 +464,8 @@ class CZSC:
         #     logger.info(f"处理完包含的k线{len(self.bars_ubi),self.bars_ubi[0].dt, self.bars_ubi[-1].dt}")
 
         # 更新重叠区
+        # self.bars_ucd = self.bars_raw
+        self.bars_ucd.append(bar)
         self.__update_cdk()
 
         # 更新笔
@@ -494,7 +511,7 @@ class CZSC:
         else:
             cdk = None
 
-        print("检查是否输出了重叠k区域",len(cdk), cdk[0])
+        print("to_echarts:重叠区检测",len(cdk), cdk[-1])
         # chart = kline_pro(kline, bi=bi, fx=fx, width=width, height=height, bs=bs,
         #                   title="{}-{}".format(self.symbol, self.freq.value))
         chart = kline_pro(kline, bi=bi, fx=fx, cdk=cdk, width=width, height=height, bs=bs,

@@ -332,20 +332,18 @@ def kline_pro(kline: List[dict],
         chart_bi.set_global_opts(xaxis_opts=grid0_xaxis_opts, legend_opts=legend_not_show_opts)
         chart_k = chart_k.overlap(chart_bi)
 
-    from pyecharts.charts import Candlestick
-
     # 设置重叠K区域的显示
     if cdk:
-        print("重叠区检测",len(cdk),cdk[0])
+        print("kline_pro：重叠区检测",len(cdk),cdk[-1])
         for x in cdk:
             cdk_dts = [x['dt1'], x['dt2'], x['dt2'], x['dt1'], x['dt1']]
             cdk_val = [x['low'], x['low'], x['high'], x['high'], x['low']]
 
             chart_cdk = Line()
             chart_cdk.add_xaxis(cdk_dts)
-            chart_cdk.add_yaxis(series_name="重叠区", y_axis=cdk_val, is_selected=True,
+            chart_cdk.add_yaxis(series_name="CDK", y_axis=cdk_val, is_selected=True,
                                 label_opts=opts.LabelOpts(is_show=False),
-                                linestyle_opts=opts.LineStyleOpts(color="red"), )
+                                linestyle_opts=opts.LineStyleOpts(color="red",width=2, opacity=0.5))
             chart_cdk.set_global_opts(xaxis_opts=grid0_xaxis_opts, legend_opts=legend_not_show_opts)
             chart_k = chart_k.overlap(chart_cdk)
 

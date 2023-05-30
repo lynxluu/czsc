@@ -154,28 +154,34 @@ def main():
     # # 000905.SH  000016.SH  512880.SH 688981.SH  000999.SZ  002624.SZ
     ## 300649.SZ 杭州园林  000932.SH#I 全指消费 000858.SZ 五粮液
     # symbol = '688111.SH#E'
-    symbol = '000001.SH#I'
+    # symbol = '000001.SH#I'
 
-    single('600903.SH','15min')
+    # single('600903.SH','15min')
     # single('000001.SH','15min')
     # single('000001.SH','D')
+    single('002624.SZ','D')
     # single_3l(symbol)
 
 def single(symbol, freq):
 
     # bars = get_bars(dc, symbol,)
     bars = get_bars(dc, symbol, freq)
+    logger.info(f"获取k线完成@{dt.datetime.now()}")
     n_bars = merge_bars(bars)
-    test_cdk(n_bars)
+    logger.info(f"合并k线完成@{dt.datetime.now()}")
+    test_cdk(bars)
+    logger.info(f"测试重叠k线完成@{dt.datetime.now()}")
+    test_bi(n_bars)
+    logger.info(f"测试笔k线完成@{dt.datetime.now()}")
 
     # 在echart中展示
     # show(n_bars)
     if bars:
         show(bars)
-
+    logger.info(f"绘制k线完成@{dt.datetime.now()}")
     # test_merge(n_bars)
     # test_fx(n_bars)
-    # test_bi(n_bars)
+
     # test_cdk(bars)
 
 
@@ -225,16 +231,17 @@ def test_fx(bars: List[NewBar]) -> List[FX]:
     # 查看发现5.12明显不是底分型
     return fxs
 
-def test_bi(bars: List[NewBar]) -> List[BI]:
+def test_bi(bars: List[NewBar]):
     bi_list=[]
-
+    if len(bars) < 3:
+        return
 
 def test_cdk(bars):
-    print('开始测试重叠区计算函数')
-    has_cd, cdks = check_cdk(bars)
-    if has_cd:
-        print('发现重叠区域%d组:' %len(cdks))
-        for cdk in cdks:
+    print('测试重叠计算函数', end='')
+    cdks = check_cdk(bars)[0]
+    if cdks:
+        print('发现重叠区%d组:' %len(cdks))
+        for cdk in cdks[-3:]:
             print("重叠k线数：",cdk.kcnt, "起止范围：",cdk.sdt, cdk.edt, "重叠区域：",cdk.low, cdk.high)
 # 展示k线
 def show(bars):
