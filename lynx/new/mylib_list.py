@@ -14,21 +14,6 @@ def tostr(dt):
     date_str = dt.strftime(dt_fmt)
     return date_str
 
-def format_bars(df, freq):
-    # 转换成czsc统一的格式
-    df = df.rename(columns={'code': 'symbol', 'date': 'dt', 'volume': 'vol', 'turnoverratio': 'turno', })
-    df['freq'] = freq
-    df['id'] = df.reset_index().index
-    print(df.tail(1))
-    return df
-def get_bars(symbol, freq):
-    df = ts.get_k_data(code=symbol, ktype='5', autype='qfq', start=None, end=None, retry_count=3, )
-
-    # print(df.columns)
-    # 获取数据格式['date', 'open', 'close', 'high', 'low', 'volume', 'amount', 'turnoverratio', 'code']
-    df = format_bars(df, freq)
-    return df
-
 
 # 检查包含关系
 def is_contained(k1, k2) -> int:
@@ -53,91 +38,82 @@ def count_bars(bars:pd.DataFrame) -> int:
 
 
 # 输入一串原始k线，生成无包含关系的k线
-def merge_bars(df):
-    # 1.若输入空DataFrame或长度不大于2条，返回None
-    if df.empty or len(df) <= 2:
-        return pd.DataFrame()
+def merge_bars(bars: pd.DataFrame) -> pd.DataFrame:
+    # 1.若输入空列表或长度不大于2条，返回None
+    if not bars or len(bars) <= 2:
+        return []
 
-    n = len(df)
+    n = len(bars)
     print('开始处理%d条k线：' % n, end=' ')
 
-    # 2. 从df头部寻找两条不包含的k线 加入结果列表n_df,新建的n_df不是空的。导致问题
-    n_df = pd.DataFrame(columns=df.columns)
-    print(len(n_df))
-    for i, row in df.iterrows():
-        if len(n_df) < 2:
-            # k1,k2 需要是 NewBar 现在都是RawBar 要转换，k3不变
-            # n_df = n_df.append(row)
-            if row.loc['dt']:
-                n_df = pd.concat([n_df, row], ignore_index=True)
+    # 2. 从bars头部寻找两条不包含的k线 加入结果列表n_bars
+    n_bars = []
+    for kline in bars:
+        if len(n_bars) < 2:
+            n_bars.append(kline)
         else:
-            print(n_df.head())
-            k1, k2 = n_df.tail(2).iloc[0], n_df.tail(2).iloc[1]
-            if is_contained(k1,k2):
-                n_df = n_df.iloc[1:]
+            k1, k2 = bars.tail(2)
+            if is_contained(k1, k2):
+                n_bars.drop(0)
 
-            k3 = row
+        k3 = kline
 
-            # 如果k3时间比k2大，判断后合并
-            print(k3.loc['dt'],k2.loc['dt'],k1.to_dict(),k2.to_dict(),k3.to_dict())
-            if k3.loc['dt'] > k2.loc['dt'] :
-                has_include, k4 = remove_include(k1, k2, k3)
-                if has_include:
-                    # k2,k3包含，弹出k3,合并k4
-                    n_df = n_df.iloc[:-1]
-                    # n_df = n_df.append(k4)
-                # else:
-                    # k2，k3不包含，直接合并k4
-                    # n_df = n_df.append(k4)
-                n_df = pd.concat([n_df, k4], ignore_index=True)
+        # 如果k3时间比k2大，判断后合并
+        if k3.dt > k2.dt:
+            has_include, k4 = remove_include(k1, k2, k3)
+            if has_include:
+                # k2,k3包含，弹出k3,合并k4
+                n_bars.pop()
+                n_bars.append(k4)
+            else:
+                # k2，k3不包含，直接合并k4
+                n_bars.append(k4)
 
-    print("合并后得到%d条k线" % len(n_df))
-    return n_df
-
-
-def remove_include(k1, k2, k3):
-    # 1.若输入为空，返回False和空DataFrame
-    if k1.empty or k2.empty or k3.empty:
-        return False, pd.DataFrame()
-
-    # 2. 判断k1和k2的最高价，判断方向
-    if k1.loc['high'] < k2.loc['high']:
+    print("合并后得到%d条k线" % len(n_bars))
+    return n_bars
+def remove_include(k1: NewBar, k2: NewBar, k3: RawBar):
+    """去除包含关系：输入三根k线，其中k1和k2为没有包含关系的K线，k3为原始K线"""
+    if k1.high < k2.high:
         direction = Direction.Up
-    elif k1.loc['high'] > k2.loc['high']:
+    elif k1.high > k2.high:
         direction = Direction.Down
     else:
-        # k1和k2高相当，不能判断走势方向，但是说明包含
-        k4 = k3.copy()
+        k4 = NewBar(symbol=k3.symbol, id=k3.id, freq=k3.freq, dt=k3.dt, open=k3.open,
+                    close=k3.close, high=k3.high, low=k3.low, vol=k3.vol, elements=[k3])
         return False, k4
 
-    #3. 判断k2和k3之间是否存在包含关系，有则处理
-    if (k2.loc['high'] <= k3.loc['high'] and k2.loc['low'] >= k3.loc['low']) \
-            or (k2.loc['high'] >= k3.loc['high'] and k2.loc['low'] <= k3.loc['low']):
+    # 判断 k2 和 k3 之间是否存在包含关系，有则处理
+    if (k2.high <= k3.high and k2.low >= k3.low) or (k2.high >= k3.high and k2.low <= k3.low):
         if direction == Direction.Up:
-            high = max(k2.loc['high'], k3.loc['high'])
-            low = max(k2.loc['low'], k3.loc['low'])
-            dt = k2.loc['dt'] if k2.loc['high'] > k3.loc['high'] else k3.loc['dt']
+            high = max(k2.high, k3.high)
+            low = max(k2.low, k3.low)
+            dt = k2.dt if k2.high > k3.high else k3.dt
         elif direction == Direction.Down:
-            high = min(k2.loc['high'], k3.loc['high'])
-            low = min(k2.loc['low'], k3.loc['low'])
-            dt = k2.loc['dt'] if k2.loc['low'] < k3.loc['low'] else k3.loc['dt']
+            high = min(k2.high, k3.high)
+            low = min(k2.low, k3.low)
+            dt = k2.dt if k2.low < k3.low else k3.dt
+        else:
+            raise ValueError
 
-        if k2.loc['open'] > k3.loc['close']:
+        if k2.open > k3.close:
             open_ = high
             close = low
         else:
             open_ = low
             close = high
 
-        vol = k2.loc['vol'] + k3.loc['vol']
-        # elements = [x for x in k2.loc['elements'][:100] if x['dt'] != k3.loc['dt']] + [ k3 ]
-        elements = None
-        k4 = {'symbol': k3.loc['symbol'], 'id': k2.loc['id'], 'freq': k2.loc['freq'], 'dt': dt,
-              'open': open_, 'close': close, 'high': high, 'low': low, 'vol': vol, 'elements': elements}
-        return True, pd.DataFrame([k4])
+        vol = k2.vol + k3.vol
+        # 这里有一个隐藏Bug，len(k2.elements) 在一些及其特殊的场景下会有超大的数量，具体问题还没找到；
+        # 临时解决方案是直接限定len(k2.elements)<=100
+        elements = [x for x in k2.elements[:100] if x.dt != k3.dt] + [k3]
+        k4 = NewBar(symbol=k3.symbol, id=k2.id, freq=k2.freq, dt=dt, open=open_,
+                    close=close, high=high, low=low, vol=vol, elements=elements)
+        return True, k4
     else:
-        k4 = k3.copy()
+        k4 = NewBar(symbol=k3.symbol, id=k3.id, freq=k3.freq, dt=k3.dt, open=k3.open,
+                    close=k3.close, high=k3.high, low=k3.low, vol=k3.vol, elements=[k3])
         return False, k4
+
 
 
 def check_fx(k1: NewBar, k2: NewBar, k3: NewBar):
@@ -162,7 +138,7 @@ def check_fxs(bars: List[NewBar]) -> List[FX]:
     for i in range(1, len(bars)-1):
         fx: FX = check_fx(bars[i-1], bars[i], bars[i+1])
         if isinstance(fx, FX):
-            fxs.concat(fx)
+            fxs.append(fx)
     return fxs
 
 
@@ -224,7 +200,7 @@ def check_bi(bars: List[NewBar]):
     for x in bars_a:
         for y in x.elements:
             if fx_a.elements[1].dt <= y.dt <= fx_b.elements[1].dt:
-                bars_ar.concat(y)
+                bars_ar.append(y)
     bars_b = [x for x in bars if x.dt >= fx_b.elements[0].dt]
 
     # 判断fx_a和fx_b价格区间是否存在包含关系
@@ -322,7 +298,7 @@ def check_cdk(bars: List[RawBar], pre_cdk=None, pre_bar=None, ):
                     # logger.info(f"发现nk重叠{pre_cdk.kcnt, pre_cdk.sdt, pre_cdk.edt}")
                 else:  # 如果找不出重叠，且kcnt>=3 pre_cdk加入列表； 然后清空pre_cdk，赋值pre_bar 寻找新的重叠
                     if pre_cdk.kcnt >= 3:
-                        cdks.concat(pre_cdk)
+                        cdks.append(pre_cdk)
                         # logger.info(f"记录nk重叠{pre_cdk.kcnt, pre_cdk.sdt, pre_cdk.edt}")
                     pre_cdk = None
                     pre_bar = bar
