@@ -20,10 +20,11 @@ from czsc.utils.echarts_plot import kline_pro
 from czsc import envs
 
 # logger.disable('analyze')
-logger.level('ERROR')
+# logger.level('ERROR')
 
-dt_fmt = "%Y%m%d:%H%M"
+
 def tostr(dt):
+    dt_fmt = "%Y%m%d:%H%M"
     date_str = dt.strftime(dt_fmt)
     return date_str
 def remove_include(k1: NewBar, k2: NewBar, k3: RawBar):
@@ -297,7 +298,7 @@ def check_cdk(bars: List[RawBar], pre_cdk=None, pre_bar=None,):
     if len(cdks)>0:
         bars_ = [x for x in bars if x.dt >= cdks[-1].edt]
     else:
-        bars_ = bar
+        bars_ = bars
 
     return cdks, bars_
 

@@ -7,7 +7,7 @@ def get_k():
     autype='qfq'
     start=None
     end=None
-    retry_count=3
+    # retry_count=3
 
     # 使用get_hist_data()函数获取K线数据
     # df1 = ts.get_hist_data('600519')
@@ -18,13 +18,13 @@ def get_k():
     # 需要修改 C:\Python\Python38-32\lib\site-packages\tushare\stock\trading.py 706行的代码
             # df = _get_k_data(url, dataflag, symbol, code, index, ktype, retry_count, pause)
             # data = pd.concat([data,df])
-    # df2 = ts.get_k_data('600519')
-    # print(len(df2), df2.head())
+    df2 = ts.get_k_data('000001',ktype='D')
+    print(len(df2), df2.head())
 
     # 打印前5行数据
     # ['date', 'open', 'close', 'high', 'low', 'volume', 'amount', 'turnoverratio', 'code']
-    df3 = ts.get_k_data(code='600519', ktype='5', autype='qfq', start=None, end=None, retry_count=3, )
-    print(len(df3), '\n', df3.columns, '\n', df3.tail())
+    # df3 = ts.get_k_data(code='600519', ktype='5', autype='qfq', start=None, end=None, retry_count=3, )
+    # print(len(df3), '\n', df3.columns, '\n', df3.tail())
 
 def get_symbols():
     # 获取沪市所有股票代码
@@ -63,5 +63,6 @@ def get_symbols():
 
     return all_codes
 
-symbols = get_symbols()
-print(len(symbols), symbols.head(), symbols.tail())
+# symbols = get_symbols()
+# print(len(symbols), symbols.head(), symbols.tail())
+get_k()
