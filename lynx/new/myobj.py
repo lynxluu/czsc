@@ -89,3 +89,23 @@ class BI:
     direction: Direction = None
     bars: List[NewBar] = None
     cache: dict = None  # cache 用户缓存
+
+    def __post_init__(self):
+        self.sdt = self.fx_a.dt
+        self.edt = self.fx_b.dt
+
+    def __repr__(self):
+        return f"BI(symbol={self.symbol}, sdt={self.sdt}, edt={self.edt}, " \
+               f"direction={self.direction}, high={self.high}, low={self.low})"
+
+    @property
+    def high(self):
+        # def __default(): return max(self.fx_a.high, self.fx_b.high)
+        #
+        # return self.get_cache_with_default('high', __default)
+
+        return max(self.fx_a.high, self.fx_b.high)
+
+    @property
+    def low(self):
+        return min(self.fx_a.low, self.fx_b.low)

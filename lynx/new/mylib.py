@@ -10,33 +10,31 @@ from loguru import logger
 
 dt_fmt = "%Y-%m-%d %H:%M:%S"
 date_fmt = "%Y-%m-%d"
-
+short_fmt = "%y%m%d %H%M"
 
 logger.level("INFO")
 
 
 # 把dt转换成简单格式
 def tostr(dt):
-    short_fmt = "%y-%m%d-%H%M"
     # dt = pd.to_datetime(dt)
     date_str = dt.strftime(short_fmt)
     return date_str
 
+
 def format_bars(df, freq):
+    if df.empty:
+        return pd.DataFrame()
     # 转换成czsc统一的格式
+    logger.info(f"转换成统一格式:")
     # df = df.rename(columns={'code': 'symbol', 'date': 'dt', 'volume': 'vol', 'turnoverratio': 'turno', })
-    df['symbol'] = df['code']
+    df = df.rename(columns={'code': 'symbol', 'volume': 'vol', })
+
     df['freq'] = freq
-    df['date'] = pd.to_datetime(df['date'], format=dt_fmt)
-    df['dt'] = df['date']
-    df['vol'] = df['volume']
-    if 'turnoverratio' in df:
-        df['turno'] = df['turnoverratio']
-
-
+    df['dt'] = pd.to_datetime(df['date'], format=dt_fmt)
     # df['elements'] = np.nan
     df['id'] = df.reset_index().index
-    # print(df.tail(1))
+    print(df.columns)
     return df
 def get_bars(symbol, freq):
     logger.info(f"获取{symbol,freq}的k线开始:")
@@ -44,10 +42,12 @@ def get_bars(symbol, freq):
     df = ts.get_k_data(code=symbol, ktype=freq, index=False, autype='qfq')  #查股票
     # df = ts.get_k_data(code=symbol, index=True, ktype=freq, autype='qfq')   # 查指数
 
-    print(df.columns)
+    # if df.empty:
+    #     return pd.DataFrame()
+    # print(df.columns)
     # 获取数据格式['date', 'open', 'close', 'high', 'low', 'volume', 'amount', 'turnoverratio', 'code']
     df = format_bars(df[-200:], freq)
-    logger.info(f"得到{0 if df.empty else len(df)}根k线。")
+    logger.info(f"得到{len(df)}根k线。")
     return df
 
 
@@ -208,6 +208,7 @@ def check_bi(bars, bars_raw):
     :param bars: 无包含关系K线列表
     :param benchmark: 当下笔能量的比较基准
     :return:
+
     """
     # 一笔条件，两个分型点之间的最小k线数
     min_bi_len = 4
@@ -248,31 +249,23 @@ def check_bi(bars, bars_raw):
         logger.exception("笔识别错误")
         return None, bars
 
-    # logger.info(f"-------笔步骤1a- K线范围-{tostr(bars[0].dt),tostr(bars[-1].dt)}")
+    logger.info(f"-------笔步骤1a- K线范围-{tostr(bars.iloc[0]['dt']),tostr(bars.iloc[-1]['dt'])}")
 
     # 打印 找出的 fx_a和 fx_b
     # logger.info(f"{len(fxs),fx_a.dt, fx_b.dt}")
     logger.info(f"-------笔步骤1b- 分型范围{tostr(fx_a.dt), tostr(fx_b.dt)}")
 
     # 笔步骤2 计算nk和重叠k
-    # bars是合并过的k线，bars_a 计算fx_a左侧--fx_b右侧 范围内的合并k线
-    # bars_ar 计算fx_a顶点--fx_b顶点的未合并k线
+    # bars是合并过的k线，bars_a fx_a左侧--fx_b右侧 范围内的合并k线
+    # bars_ar fx_a顶点--fx_b顶点的未合并k线
     # bars_b fx_b左侧开始的合并k线
-    # bars_a = [x for x in bars if fx_a.elements[0].dt <= x.dt <= fx_b.elements[2].dt]
-    # fx_a.elements[1] 是一个df的行，所以不能用.dt 要用['dt']
     # bars_a 现在的写法是列表，要用df的写法
-    print(type(bars.iloc[0]['dt']), type(fx_a.elements[1]['dt']), type(fx_b.elements[1]['dt']))
-    # for x in bars:
-    #     if fx_a.elements[1]['dt'] <= x['dt'] <= fx_b.elements[1]['dt']:
-    #         bars_a = pd.concat([bars_a, x.to_frame().T], ignore_index=True)
+    # print(type(bars.iloc[0]['dt']), type(fx_a.elements[1]['dt']), type(fx_b.elements[1]['dt']))
+
     bars_a = bars[bars['dt'].between(fx_a.elements[1]['dt'], fx_b.elements[1]['dt'])]
     bars_ar = bars_raw[bars_raw['dt'].between(fx_a.elements[1]['dt'], fx_b.elements[1]['dt'])]
-    # bars_a = bars[fx_a.elements[1]['dt'] <= bars['dt'] <= fx_b.elements[1]['dt']]
-    # bars_ar = bars_raw[fx_a.elements[1]['dt'] <= bars_raw['dt'] <= fx_b.elements[1]['dt']]
     bars_b = bars[bars['dt'] >= fx_b.elements[0]['dt']]
-    # bars_a = [x for x in bars if fx_a.elements[1]['dt'] <= x['dt'] <= fx_b.elements[1]['dt']]
-    # bars_ar = [x for x in bars_raw if fx_a.elements[1]['dt'] <= x['dt'] <= fx_b.elements[1]['dt']]
-    # bars_b = [x for x in bars if x['dt'] >= fx_b.elements[0]['dt']]
+
 
     # 判断fx_a和fx_b价格区间是否存在包含关系
     # ab_include = (fx_a.high > fx_b.high and fx_a.low < fx_b.low) \
@@ -282,7 +275,6 @@ def check_bi(bars, bars_raw):
 
 
     # 计算重叠k线, 从去包含的k线计算
-    # has_cdk, cdk_list = check_cdk(bars_a[1:-1])
     # 从原始k线计算,分型顶点不能算，所以
     # cdks, bars_c = check_cdk(bars_ar[1:-1])
     # cdks给默认值，绕开check_cdk函数
@@ -292,29 +284,22 @@ def check_bi(bars, bars_raw):
     # 1）顶底分型之间没有包含关系；
     # 2) 分型区间之间没有包含关系
     # 3a）笔长度 大于 min_bi_len
-    # 3b) or笔长度 = min_bi_len6,未合并k线>=7
-    # 3c）or笔长度 <= min_bi_len6, 笔之间有3K或以上重叠 check_cdk,参数用bars_a去头去尾=bars_a[1:-1],
+        # 3b) or笔长度 = min_bi_len6,未合并k线>=7
+        # 3c）or笔长度 <= min_bi_len6, 笔之间有3K或以上重叠 check_cdk,参数用bars_a去头去尾=bars_a[1:-1],
     # (len(bars_a) <= min_bi_len 这里必须用 <= 不能用 < 不满足大于6k的反面是 <= 否则会报错
     flag_bi = (len(bars_a) > min_bi_len) or \
             (len(bars_a) == min_bi_len and len(bars_ar) >= 5) or \
               (len(bars_a) <= min_bi_len and len(cdks))
 
-    # condition = (not ab_include) and flag_bi
     condition = not_include and flag_bi
-    # condition = (not ab_include) and (len(bars_a) >= min_bi_len)
+
     # 笔步骤3 条件满足，生成笔对象实例bi，将两端分型中包含的所有分型放入笔的fxs，所有k线放入笔的bars，根据起点分型设置笔方向
     if condition:
-    # if (not ab_include) and (len(bars_a) >= min_bi_len or power_enough):
         logger.info(f"笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not_include, flag_bi, len(bars_a), len(bars_ar), len(cdks)}")
-        # logger.info(f"笔步骤3-k线范围{bars[0].dt, bars[-1].dt}, 分型范围{fx_a.dt, fx_b.dt}")
         fxs_ = [x for x in fxs if fx_a.elements[0]['dt'] <= x.dt <= fx_b.elements[2]['dt']]
         bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
 
         # 笔步骤3a bi后k线低中低 低于bi的最低点，和 高中高 高于bi的最高点，则笔不成立
-        # 为什么会出现：fx_a fx_b 出现后，k还在上涨或下跌，但是未出现新的分型 导致目前的笔失败，但是未来可能会出现新的分型。
-        # print(type(bars_b.iloc[0]['low']))
-        # low_ubi = min([x['low'] for x in bars_b])
-        # high_ubi = max([x['high'] for x in bars_b])
         low_ubi = bars_b['low'].min()
         high_ubi = bars_b['high'].max()
 
@@ -324,7 +309,6 @@ def check_bi(bars, bars_raw):
             return None, bars
         else:
             return bi, bars_b
-        # return bi, bars_b
     else:
         return None, bars
 

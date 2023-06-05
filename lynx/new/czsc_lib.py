@@ -18,6 +18,10 @@ from czsc_test import *
 dc = TsDataCache(data_path=r"D:\ts_data", refresh=True)
 
 
+def now():
+    return dt.datetime.now()
+
+
 def is_contained(k1, k2):
     if k1.high >= k2.high and k1.low <= k2.low or k1.high <= k2.high and k1.low >= k2.low:
         return k1.dt
@@ -72,8 +76,8 @@ def get_bars(dc, symbol, freq='D', limit=500):
     elif len(symbol_) == 2:
         ts_code, asset = symbol_
 
-    now = dt.datetime.now()
-    edt = now.strftime(dt_fmt)
+    # now = now()
+    edt = now().strftime(dt_fmt)
     sdt = '20200101'
 
     if 'min' in freq:
@@ -91,19 +95,21 @@ def single(symbol, freq):
 
     # bars = get_bars(dc, symbol,)
     bars = get_bars(dc, symbol, freq)
-    logger.info(f"获取k线完成@{dt.datetime.now()}")
+    if not bars:
+        return
+    logger.info(f"获取{len(bars)}条k线完成@{now()}")
     n_bars = merge_bars(bars)
-    logger.info(f"合并k线完成@{dt.datetime.now()}")
+    logger.info(f"合并k线完成，获得{len(n_bars)}条k线@{now()}")
     test_cdk(bars)
-    logger.info(f"测试重叠k线完成@{dt.datetime.now()}")
+    logger.info(f"测试重叠k线完成@{now()}")
     test_bi(n_bars)
-    logger.info(f"测试笔k线完成@{dt.datetime.now()}")
+    logger.info(f"测试笔k线完成@{now()}")
 
     # 在echart中展示
     # show(n_bars)
     if bars:
         show(bars)
-    logger.info(f"绘制k线完成@{dt.datetime.now()}")
+    logger.info(f"绘制k线完成@{now()}")
     # test_merge(n_bars)
     # test_fx(n_bars)
 

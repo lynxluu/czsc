@@ -6,11 +6,12 @@ from typing import List
 from loguru import logger
 
 
-dt_fmt = "%y%m%d:%H%M"
+
 
 
 # 把dt转换成简单格式
 def tostr(dt):
+    dt_fmt = "%y%m%d:%H%M"
     date_str = dt.strftime(dt_fmt)
     return date_str
 

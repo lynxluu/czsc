@@ -26,43 +26,40 @@ def get_k():
     # df3 = ts.get_k_data(code='600519', ktype='5', autype='qfq', start=None, end=None, retry_count=3, )
     # print(len(df3), '\n', df3.columns, '\n', df3.tail())
 
-def get_symbols():
+def get_stock():
     # 获取沪市所有股票代码
-    sh_stock = ts.get_stock_basics()
-    sh_stock = sh_stock.reset_index()
-    sh_stock['code'] = sh_stock['code'].apply(lambda x: 'sh' + x)
+    pro = ts.pro_api()
+    df = pro.query('stock_basic', exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,list_date')
+    df['symbol'] = df['ts_code']+'#E'
 
-    # 获取深市所有股票代码
-    sz_stock = ts.get_stock_basics('2019-12-31', 'S')
-    sz_stock = sz_stock.reset_index()
-    sz_stock['code'] = sz_stock['code'].apply(lambda x: 'sz' + x)
+    return df
 
-    # 合并沪深两市股票代码
-    all_stock = pd.concat([sh_stock, sz_stock], axis=0, ignore_index=True)
+def get_fund():
+    pro = ts.pro_api()
+    df = pro.fund_basic(market='E')
+    df['symbol'] = df['ts_code'] + '#FD'
 
-    # 获取沪市指数代码
-    sh_index = ts.get_hs300s()
-    sh_index['code'] = sh_index['code'].apply(lambda x: 'sh' + x)
+    return df
 
-    # 获取深市指数代码
-    sz_index = ts.get_sz50s()
-    sz_index['code'] = sz_index['code'].apply(lambda x: 'sz' + x)
+def get_index():
+    pro = ts.pro_api()
+    # 获取申万一级、二级、三级行业列表 level='L2' L1 L3
+    # df = pro.index_classify(level='L2', src='SW2021')
+    # df = pro.index_basic(market='SW', category='二级行业指数')
+    df = pro.index_basic(market='CSI', category='二级行业指数')
+    df['symbol'] = df['ts_code'] + '#I'
 
-    # 合并沪深两市指数代码
-    all_index = pd.concat([sh_index, sz_index], axis=0, ignore_index=True)
+    return df
 
-    # 获取基金代码
-    all_fund = ts.fund_basic()
-    all_fund = all_fund.reset_index()
-    all_fund['ts_code'] = all_fund['ts_code'].apply(lambda x: x.split('.')[0])
+# res = get_stock()
+res = get_index()
+# res = get_fund()
 
-    # 合并所有股票、指数和基金代码
-    all_codes = pd.concat([all_stock[['code', 'name']], all_index[['code', 'name']], all_fund[['ts_code', 'name']]],
-                          axis=0, ignore_index=True)
-    all_codes.columns = ['code', 'name']
+print(len(res), res.columns, )
+# if not res.empty:
+#     print(res.iloc[-1].to_dict())
 
-    return all_codes
+# for index, row in res.iterrows():
+#     print(row.to_dict())
 
-# symbols = get_symbols()
-# print(len(symbols), symbols.head(), symbols.tail())
-get_k()
+print(res)
