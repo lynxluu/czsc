@@ -117,7 +117,8 @@ def get_bars(symbol=None, freq='D', limit=200):
 
 # symbol = '801983.SI#I'
 symbol = '399986.CSI#I'
-freq = '30min'
+# freq = '30min'
+freq = 'W'
 limit = 200
 adj = 'qfq'
 
