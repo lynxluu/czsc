@@ -22,34 +22,122 @@ def tostr(dt):
     return date_str
 
 
+def get_code(symbol):
+    symbol_ = symbol.split('#')
+    # ts_code, asset = symbol_ if len(symbol_) == 2 else symbol_[0], 'E'
+    if len(symbol_) == 2:
+        ts_code, asset = symbol_
+    else:
+        ts_code, asset = symbol_[0], 'E'
+
+    return ts_code, asset
+
+
 def format_bars(df, freq):
     if df.empty:
         return pd.DataFrame()
     # 转换成czsc统一的格式
-    logger.info(f"转换成统一格式:")
-    # df = df.rename(columns={'code': 'symbol', 'date': 'dt', 'volume': 'vol', 'turnoverratio': 'turno', })
-    df = df.rename(columns={'code': 'symbol', 'volume': 'vol', })
+    # logger.info(f"转换成统一格式:")
+    # 需要把 trade_time trade_date，date 统一成dt; code 统一成 ts_code； volume统一成vol；加入freq
+    # 旧版格式处理,
+    df = df.rename(columns={'code': 'ts_code', 'volume': 'vol', 'date': 'trade_date'})
+    # 根据收盘价和成交量计算成交额
+    if 'amount' not in df.columns:
+        df['amount'] = df['close'] * df['vol']
+
+    # 日期统一处理
+    df = df.rename(columns={'trade_time': 'dt'})
+    if 'dt' not in df.columns:
+        df['dt'] = pd.to_datetime(df['trade_date'], format=dt_fmt)
 
     df['freq'] = freq
-    df['dt'] = pd.to_datetime(df['date'], format=dt_fmt)
+
+    # 选取需要的字段
+    fields = ['dt', 'ts_code', 'freq', 'open', 'high', 'low', 'close', 'vol', 'amount']
+    df = df[fields]
+
     # df['elements'] = np.nan
-    df['id'] = df.reset_index().index
-    print(df.columns)
-    return df
-def get_bars(symbol, freq):
-    logger.info(f"获取{symbol,freq}的k线开始:")
-    # df = ts.get_k_data(code='688111', ktype='5', autype='qfq', start=None, end=None)
-    df = ts.get_k_data(code=symbol, ktype=freq, index=False, autype='qfq')  #查股票
-    # df = ts.get_k_data(code=symbol, index=True, ktype=freq, autype='qfq')   # 查指数
-
-    # if df.empty:
-    #     return pd.DataFrame()
+    # df['id'] = df.reset_index().index
+    # df.set_index('dt', inplace=True)
     # print(df.columns)
-    # 获取数据格式['date', 'open', 'close', 'high', 'low', 'volume', 'amount', 'turnoverratio', 'code']
-    df = format_bars(df[-200:], freq)
-    logger.info(f"得到{len(df)}根k线。")
     return df
 
+
+# 返回单个级别的k线
+def get_bars(symbol, freq='D', adj='qfq', limit=200, api=2):
+    logger.info(f"开始获取{symbol,freq}的单级别k线,api={api}:")
+    ts_code, asset = get_code(symbol)
+
+    if api == 2:
+        adj2 = None if asset == 'I' else adj
+        df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, adj=adj2, limit=limit)
+
+    else:
+        code = ts_code.split('.')[0]
+        index = True if asset == 'I' else False
+        ktype = freq.replace('min', '') if 'min' in freq else freq
+        df = ts.get_k_data(code=code, ktype=ktype, index=index, autype=adj).iloc[-limit:]  # 查股票
+
+
+    logger.info(f"获得{len(df)}根k线。")
+    if len(df) > 0:
+        df = format_bars(df, freq)
+        # debug取不足要求k线数量的
+        if len(df) < limit:
+            print(f"{ts_code},{freq},只取得{len(df)}根k线，dt范围={df.iloc[0]['dt'],df.iloc[-1]['dt']}")
+
+
+    return df
+
+
+def get_bars_4l(symbol, adj='qfq', limit=200, api=2):
+    logger.info(f"开始获取{symbol}的四个级别k线,api={api}:")
+    ts_code, asset = get_code(symbol)
+    freqs = ('5min', '30min', 'D', 'W')
+    data = pd.DataFrame()
+    for freq in freqs:
+        df=get_bars(symbol=symbol,adj=adj,limit=limit,api=api,freq=freq)
+        if len(df)>0:
+            df = format_bars(df, freq)
+            data = pd.concat([data, df], ignore_index=True)
+            if len(df) < limit:
+                print(f"{ts_code},{freq},只取得{len(df)}根k线，最后一根dt={df.iloc[-1]['dt']}")
+
+    logger.info(f"得到{len(data)}根k线。")
+    return data
+
+# 返回4个级别的k线
+def get_bars_4lx(symbol, adj='qfq', limit=200, api=2):
+    logger.info(f"开始获取{symbol}的四个级别k线,api={api}:")
+    ts_code, asset = get_code(symbol)
+    freqs = ('5min', '30min', 'D', 'W')
+
+    data = pd.DataFrame()
+    for freq in freqs:
+        if api == 2:
+            df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, adj=adj, limit=limit)
+        else:
+            code = ts_code.split('.')[0]
+            index = True if asset == 'I' else False
+            ktype = freq.replace('min', '') if 'min' in freq else freq
+            df = ts.get_k_data(code=code, ktype=ktype, index=index, autype=adj).iloc[-limit:]  #查股票
+
+        # print(df.columns)
+        if not df.empty:
+            df = format_bars(df, freq)
+            data = pd.concat([data, df], ignore_index=True)
+
+        # debug取不足要求k线数量的
+        if len(df) < limit:
+            print(f"{ts_code},{freq},只取得{len(df)}根k线，最后一根dt={df.iloc[-1]['dt']}" )
+
+    # print(data.columns)
+    # 旧接口数据格式['date', 'open', 'close', 'high', 'low', 'volume', 'amount', 'turnoverratio', 'code']
+    # 新接口指数：'ts_code', 'trade_time', 'open', 'close', 'high', 'low', 'vol','amount', 'trade_date', 'pre_close', 'change', 'pct_chg'
+    # 需要把 trade_time trade_date，date 统一成dt; code 统一成ts_code； volume统一成vol；加入freq
+
+    logger.info(f"得到{len(data)}根k线。")
+    return data
 
 # 检查包含关系
 def is_contained(k1:pd.DataFrame, k2:pd.DataFrame) -> bool:
