@@ -8,7 +8,7 @@ def main():
     # # 处理单个代码
     # #  512880.SH
 
-    single('801983#I', 'D')
+    single('500017.SH#FD', 'D')
     # single('002624.SZ', 'D')
     # single_3l(symbol)
 

@@ -32,6 +32,7 @@ def get_stock():
     df = pro.query('stock_basic', exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,list_date')
     df['symbol'] = df['ts_code']+'#E'
 
+    df.to_csv('_stocks.csv')
     return df
 
 def get_fund():
@@ -39,21 +40,93 @@ def get_fund():
     df = pro.fund_basic(market='E')
     df['symbol'] = df['ts_code'] + '#FD'
 
+    df.to_csv('_funds.csv')
     return df
 
 def get_index():
     pro = ts.pro_api()
     # 获取申万一级、二级、三级行业列表 level='L2' L1 L3
     # df = pro.index_classify(level='L2', src='SW2021')
-    # df = pro.index_basic(market='SW', category='二级行业指数')
-    df = pro.index_basic(market='CSI', category='二级行业指数')
+    df = pro.index_basic(market='SW', category='二级行业指数')
+    # df = pro.index_basic(market='CSI', category='二级行业指数')
     df['symbol'] = df['ts_code'] + '#I'
+
+    df.to_csv('_indexs.csv')
+    return df
+
+
+def get_ft():
+    # 初始化pro接口
+    pro = ts.pro_api()
+
+    # 获取铁矿石期货的交易所代码
+    # df = pro.fut_basic(exchange='DCE', fut_type='2', fields='ts_code,symbol,name,list_date,delist_date')
+
+    ts_code = 'IL9'
+    freq = '30min'
+    # fut_daily 日线， ft_mins 分时获取铁矿石期货的30分钟行情数据
+    # df = pro.fut_daily(ts_code=ts_code)
+    # df = pro.ft_mins(ts_code=ts_code, freq='30min')
+    df = pro.ft_mins(ts_code=ts_code, start_date='20230501', end_date='20230606', freq=freq, limit=200)
+
+    return df
+
+
+def get_bars(symbol=None, freq='D', limit=200):
+
+    if not symbol:
+        # 默认是中证银行指数
+        symbol = '399986.CSI#I'
+        freq = '30min'
+
+    symbol_ = symbol.split('#')
+    # ts_code, asset = symbol_ if len(symbol_) == 2 else symbol_[0], 'E'
+    if len(symbol_) == 2:
+        ts_code, asset = symbol_
+    else:
+        ts_code, asset = symbol_[0], 'E'
+
+    # ts_code, asset = symbol.split('#')
+    # freq = '30min'
+
+    # 获取中证银行指数的日线K线数据
+    pro = ts.pro_api()
+    df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, limit=limit)
+    # df = pro.index_daily(ts_code=symbol)
+
+    # # 转换时间字段为datetime格式
+    # df['trade_date'] = pd.to_datetime(df['trade_date'])
+
+    # 选取需要的字段
+    # fields = ['trade_date', 'open', 'high', 'low', 'close', 'vol']
+    # df = df[fields]
+
+    # # 按时间排序
+    # df = df.sort_values('trade_date')
+
+    # 输出结果
+    # print(df)
 
     return df
 
 # res = get_stock()
-res = get_index()
+# res = get_index()
 # res = get_fund()
+# res = get_ft()
+# res = get_bar()
+
+# symbol = '801983.SI#I'
+symbol = '399986.CSI#I'
+freq = '30min'
+limit = 200
+adj = 'qfq'
+
+# res = get_bars('399986.CSI#I','D')
+# res = get_bars(symbol,freq)
+# res = get_bars('002624.SH','30min')
+
+pro = ts.pro_api()
+res = ts.pro_bar(ts_code=symbol, freq=freq, limit=limit)
 
 print(len(res), res.columns, )
 # if not res.empty:
