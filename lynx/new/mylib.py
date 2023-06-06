@@ -67,25 +67,28 @@ def format_bars(df, freq):
 def get_bars(symbol, freq='D', adj='qfq', limit=200, api=2):
     logger.info(f"开始获取{symbol,freq}的单级别k线,api={api}:")
     ts_code, asset = get_code(symbol)
+    df = pd.DataFrame()
+    try:
+        if api == 2:
+            adj2 = None if asset == 'I' else adj
+            # 要想获取比较多的分钟k线，需要指定start_date
+            start_date = '20230401' if 'min' in freq else None
+            df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, adj=adj2, start_date=start_date, limit=limit)
 
-    if api == 2:
-        adj2 = None if asset == 'I' else adj
-        df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, adj=adj2, limit=limit)
+        else:
+            code = ts_code.split('.')[0]
+            index = True if asset == 'I' else False
+            ktype = freq.replace('min', '') if 'min' in freq else freq
+            df = ts.get_k_data(code=code, ktype=ktype, index=index, autype=adj).iloc[-limit:]  # 查股票
 
-    else:
-        code = ts_code.split('.')[0]
-        index = True if asset == 'I' else False
-        ktype = freq.replace('min', '') if 'min' in freq else freq
-        df = ts.get_k_data(code=code, ktype=ktype, index=index, autype=adj).iloc[-limit:]  # 查股票
-
-
-    logger.info(f"获得{len(df)}根k线。")
-    if len(df) > 0:
-        df = format_bars(df, freq)
-        # debug取不足要求k线数量的
-        if len(df) < limit:
-            print(f"{ts_code},{freq},只取得{len(df)}根k线，dt范围={df.iloc[0]['dt'],df.iloc[-1]['dt']}")
-
+        logger.info(f"获得{len(df)}根k线。")
+        if len(df) > 0:
+            df = format_bars(df, freq)
+            # debug取不足要求k线数量的
+            if len(df) < limit:
+                print(f"{ts_code},{freq},只取得{len(df)}根k线，dt范围={df.iloc[0]['dt'],df.iloc[-1]['dt']}")
+    except Exception as e:
+        print(e.args)
 
     return df
 
@@ -115,7 +118,10 @@ def get_bars_4lx(symbol, adj='qfq', limit=200, api=2):
     data = pd.DataFrame()
     for freq in freqs:
         if api == 2:
-            df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, adj=adj, limit=limit)
+            adj2 = None if asset == 'I' else adj
+            # 要想获取比较多的分钟k线，需要指定start_date
+            start_date = '20230401' if 'min' in freq else None
+            df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, adj=adj2, start_date=start_date, limit=limit)
         else:
             code = ts_code.split('.')[0]
             index = True if asset == 'I' else False
