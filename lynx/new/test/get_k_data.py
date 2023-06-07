@@ -1,30 +1,39 @@
 import tushare as ts
 import pandas as pd
 
-def get_k():
-    code='600519'
-    ktype='5'
-    autype='qfq'
-    start=None
-    end=None
-    # retry_count=3
-
-    # 使用get_hist_data()函数获取K线数据
-    # df1 = ts.get_hist_data('600519')
-    # df1 = ts.get_hist_data(code=code, ktype=ktype,)
-    # print(len(df1), '\n', df1.columns, '\n', df1.tail())
-
+def get_bars_v1(symbol, freq):
     # 使用get_k_data()函数获取K线数据
     # 需要修改 C:\Python\Python38-32\lib\site-packages\tushare\stock\trading.py 706行的代码
             # df = _get_k_data(url, dataflag, symbol, code, index, ktype, retry_count, pause)
             # data = pd.concat([data,df])
-    df2 = ts.get_k_data('000001',ktype='D')
-    print(len(df2), df2.head())
 
+    symbol_ = symbol.split('#')
+    if len(symbol_) == 2:
+        ts_code, asset = symbol_
+    else:
+        ts_code, asset = symbol_[0], 'E'
+
+    code = ts_code.split('.')[0]
+    index = True if asset == 'I' else False
+    ktype = freq.replace('min', '') if 'min' in freq else freq
+    start = '2023-01-01'
+
+    # df = ts.get_k_data('000001',ktype='D')
+    # df = ts.get_k_data(code=code, ktype=ktype)
+    df = ts.get_k_data(code=code, ktype=ktype, index=index, autype=adj)
+
+
+    # 使用get_hist_data()函数获取K线数据
+    # df = ts.get_hist_data('600519')
+
+    # df = ts.get_hist_data(code=code, ktype=ktype, start=start)
+
+    # print(len(df), df.head())
     # 打印前5行数据
     # ['date', 'open', 'close', 'high', 'low', 'volume', 'amount', 'turnoverratio', 'code']
     # df3 = ts.get_k_data(code='600519', ktype='5', autype='qfq', start=None, end=None, retry_count=3, )
     # print(len(df3), '\n', df3.columns, '\n', df3.tail())
+    return df
 
 def get_stock():
     # 获取沪市所有股票代码
@@ -80,19 +89,16 @@ def get_bars(symbol=None, freq='D', limit=200):
         freq = '30min'
 
     symbol_ = symbol.split('#')
-    # ts_code, asset = symbol_ if len(symbol_) == 2 else symbol_[0], 'E'
     if len(symbol_) == 2:
         ts_code, asset = symbol_
     else:
         ts_code, asset = symbol_[0], 'E'
 
-    # ts_code, asset = symbol.split('#')
-    # freq = '30min'
+    # ts_code, asset = symbol_ if len(symbol_) == 2 else symbol_[0], 'E'
 
     # 获取中证银行指数的日线K线数据
     pro = ts.pro_api()
     df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq, limit=limit)
-    # df = pro.index_daily(ts_code=symbol)
 
     # # 转换时间字段为datetime格式
     # df['trade_date'] = pd.to_datetime(df['trade_date'])
@@ -115,19 +121,18 @@ def get_bars(symbol=None, freq='D', limit=200):
 # res = get_ft()
 # res = get_bar()
 
-# symbol = '801983.SI#I'
-symbol = '399986.CSI#I'
-# freq = '30min'
-freq = 'W'
-limit = 200
-adj = 'qfq'
 
+# symbol, freq, adj, limit = '399986.CSI#I', '30min', 'qfq', 200
+symbol, freq, adj, limit = '002624.SZ#E', 'D', 'qfq', 200
+
+res = get_bars_v1(symbol, freq)
+
+# res = get_bars(symbol, freq)
 # res = get_bars('399986.CSI#I','D')
-# res = get_bars(symbol,freq)
 # res = get_bars('002624.SH','30min')
 
-pro = ts.pro_api()
-res = ts.pro_bar(ts_code=symbol, freq=freq, limit=limit)
+# pro = ts.pro_api()
+# res = ts.pro_bar(ts_code=symbol, freq=freq, limit=limit)
 
 print(len(res), res.columns, )
 # if not res.empty:
