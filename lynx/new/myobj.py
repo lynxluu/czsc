@@ -87,7 +87,7 @@ class BI:
     fx_b: FX = None  # 笔结束的分型
     fxs: List = None  # 笔内部的分型列表
     direction: Direction = None
-    bars: List[NewBar] = None
+    bars: List = None
     cache: dict = None  # cache 用户缓存
 
     def __post_init__(self):
