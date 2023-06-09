@@ -19,7 +19,8 @@ def get_one():
     n_bars = merge_bars(bars)
 
     # bi, bars_ubi = check_bi(n_bars)
-    bis, l_bars = get_bis(n_bars)
+
+    l_bars, bis = get_bis(n_bars)
 
     # fxs = get_fxs(n_bars)
     # for fx in fxs:

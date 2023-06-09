@@ -331,32 +331,37 @@ def get_fxs(bars) -> List[FX]:
 
 
 def get_bis(bars_ubi, bi_list=[]):
+    print("执行函数",len(bi_list), len(bars_ubi))
+
     if len(bars_ubi) < 3:
         return bars_ubi, bi_list
 
-    bi, bars_ubi_ = check_bi2(bars_ubi)
+    bars_ubi_, bi = check_bi2(bars_ubi)
 
     # 退出条件 bar长度不变，说明找完了
     if len(bars_ubi_) == len(bars_ubi):
         logger.info(f"2找不到笔:,剩余k线数为{len(bars_ubi_)}")
+        print(len(bi_list), len(bars_ubi), len(bars_ubi_))
         return bars_ubi, bi_list
-    else:
-        if isinstance(bi, BI): # 否则，bi加到bi列表，再递归
-            bi_list.append(bi)
-            bars_ubi = bars_ubi_
-            logger.info(f"2找到一笔:{tostr(bi.fx_a.dt), tostr(bi.fx_b.dt)},剩余k线为{len(bars_ubi_), tostr(bars_ubi_.iloc[0]['dt'])}")
-            get_bis(bars_ubi, bi_list)
-        if bi_list:
-            # 全笔步骤4：如果当前笔被破坏，丢弃当前bi，将当前笔的bars与bars_ubi进行合并
-            last_bi = bi_list[-1]
-            if (last_bi.direction == Direction.Up and bars_ubi.iloc[0]['high'] > last_bi.high) \
-                    or (last_bi.direction == Direction.Down and bars_ubi.iloc[0]['low'] < last_bi.low):
-                bars_ubi = last_bi.bars[:-1] + [x for _, x in bars_ubi.iterrows() if
-                                                x['dt'] >= last_bi.bars.iloc[-1]['dt']]
-                bi_list.pop(-1)
-                logger.info(
-                    f"笔被破坏:{last_bi.fx_a.dt, last_bi.fx_b.dt},剩余k线为{len(bars_ubi), bars_ubi.iloc[0]['dt']}")
 
+    # 不退出，则继续执行
+    bars_ubi = bars_ubi_
+    if isinstance(bi, BI): # 否则，bi加到bi列表，再递归
+        bi_list.append(bi)
+        print("找到笔", bi.fx_b.dt, len(bi_list), len(bars_ubi), len(bars_ubi))
+        # logger.info(f"2找到一笔:{tostr(bi.fx_a.dt), tostr(bi.fx_b.dt)},剩余k线为{len(bars_ubi_), tostr(bars_ubi_.iloc[0]['dt'])}")
+        get_bis(bars_ubi, bi_list)
+        # if bi_list:
+        #     # 全笔步骤4：如果当前笔被破坏，丢弃当前bi，将当前笔的bars与bars_ubi进行合并
+        #     last_bi = bi_list[-1]
+        #     if (last_bi.direction == Direction.Up and bars_ubi.iloc[0]['high'] > last_bi.high) \
+        #             or (last_bi.direction == Direction.Down and bars_ubi.iloc[0]['low'] < last_bi.low):
+        #         bars_ubi = last_bi.bars[:-1] + [x for _, x in bars_ubi.iterrows() if
+        #                                         x['dt'] >= last_bi.bars.iloc[-1]['dt']]
+        #         bi_list.pop(-1)
+        #         logger.info(
+        #             f"笔被破坏:{last_bi.fx_a.dt, last_bi.fx_b.dt},剩余k线为{len(bars_ubi), bars_ubi.iloc[0]['dt']}")
+        #
 
 
 
@@ -381,7 +386,7 @@ def check_bi2(bars):
             direction = Direction.Up
             fxs_b = [x for x in fxs if x.mark == Mark.G and x.dt > fx_a.dt and x.fx > fx_a.fx]
             if not fxs_b:
-                return None, bars
+                return bars, None
 
 
         elif fxs[0].mark == Mark.G:
@@ -389,13 +394,13 @@ def check_bi2(bars):
             direction = Direction.Down
             fxs_b = [x for x in fxs if x.mark == Mark.D and x.dt > fx_a.dt and x.fx < fx_a.fx]
             if not fxs_b:
-                return None, bars
+                return bars, None
 
         else:
             raise ValueError
     except:
         logger.exception("笔识别错误")
-        return None, bars
+        return bars, None
 
     for fx_b in fxs_b:
         # 打印找出的 fx_a和 fx_b
@@ -422,9 +427,9 @@ def check_bi2(bars):
             # logger.info(f"######笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not_include, flag_bi, newkcnt, rawkcnt, cdkcnt}")
             fxs_ = [x for x in fxs if fx_a.elements[0]['dt'] <= x.dt <= fx_b.elements[2]['dt']]
             bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
-            return bi, bars_b
+            return bars_b, bi
 
-    return None, bars
+    return bars, None
 
 def check_bi(bars):
     """输入一串无包含关系K线，查找其中的一笔
