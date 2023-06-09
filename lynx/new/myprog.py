@@ -27,7 +27,7 @@ def get_one():
     #     print(fx.dt,fx.mark,fx.high,fx.low)
     # bhcnt = count_bars(n_bars)
 
-    print(len(bars),len(n_bars), bis, l_bars)
+    print(len(bars),len(n_bars), len(l_bars), len(bis), )
 
 
 def get_list():
