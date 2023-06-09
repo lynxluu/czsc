@@ -19,14 +19,14 @@ def get_one():
     n_bars = merge_bars(bars)
 
     # bi, bars_ubi = check_bi(n_bars)
-    bis = get_bis(n_bars)
+    bis, l_bars = get_bis(n_bars)
 
     # fxs = get_fxs(n_bars)
     # for fx in fxs:
     #     print(fx.dt,fx.mark,fx.high,fx.low)
     # bhcnt = count_bars(n_bars)
 
-    print(len(bars),len(n_bars))
+    print(len(bars),len(n_bars), bis, l_bars)
 
 
 def get_list():
