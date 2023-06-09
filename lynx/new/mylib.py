@@ -330,10 +330,9 @@ def get_fxs(bars) -> List[FX]:
     return fxs
 
 
-def get_bis(bars_ubi, bi_list=None):
-    if not bi_list:
-        bi_list = []
-    print("执行函数",len(bi_list), len(bars_ubi))
+# 递归找出所有笔
+def get_bis(bars_ubi, bi_list=[]):
+    print("执行函数", len(bi_list), len(bars_ubi))
 
     if len(bars_ubi) < 3:
         return bars_ubi, bi_list
@@ -352,7 +351,7 @@ def get_bis(bars_ubi, bi_list=None):
             print("找到笔", bi.fx_b.dt, len(bi_list), len(bars_ubi), len(bars_ubi_))
             bars_ubi = bars_ubi_
             # logger.info(f"2找到一笔:{tostr(bi.fx_a.dt), tostr(bi.fx_b.dt)},剩余k线为{len(bars_ubi_), tostr(bars_ubi_.iloc[0]['dt'])}")
-            get_bis(bars_ubi, bi_list)
+            last_bars, last_bis = get_bis(bars_ubi, bi_list)
 
         # if bi_list:
         #     # 全笔步骤4：如果当前笔被破坏，丢弃当前bi，将当前笔的bars与bars_ubi进行合并
@@ -367,7 +366,7 @@ def get_bis(bars_ubi, bi_list=None):
         #
 
     # 执行到最后要返回一个值，否则会变成None
-    # return bars_ubi, bi_list
+    return last_bars, last_bis
 
 def check_bi2(bars):
     """输入一串无包含关系K线，查找其中的一笔
