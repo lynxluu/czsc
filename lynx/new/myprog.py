@@ -9,10 +9,10 @@ def get_one():
 
     # bars = get_bars(symbol, freq, adj, api=api)
     # print(bars.dtypes)
-    # bars.to_csv(f"data_{symbol}_{adj}_{api}.csv")
+    # bars.to_csv(f"data\{symbol}_{adj}_{api}.csv")
 
     # 读完文件后，要修改数据类型
-    df = pd.read_csv(f"data_{symbol}_{adj}_{api}.csv")
+    df = pd.read_csv(f"data\{symbol}_{adj}_{api}.csv")
     # print(df.dtypes)
     bars = format_csv(df)
 

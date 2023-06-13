@@ -1,6 +1,17 @@
 import tushare as ts
 import pandas as pd
 
+
+def get_top30():
+    # 获取所有A股每日交易数据
+    data = ts.get_day_all()
+    # 筛选出最近五个交易日的数据
+    recent_data = data[data['tradeDate'] >= pd.Timestamp('today').normalize() - pd.Timedelta(days=5)]
+    # 按照成交额进行排序，并选取前30个股票代码
+    top30_codes = recent_data.sort_values(by='amount', ascending=False)['code'][:30].tolist()
+    print(top30_codes)
+
+
 def get_bars_v1(symbol, freq):
     # 使用get_k_data()函数获取K线数据
     # 需要修改 C:\Python\Python38-32\lib\site-packages\tushare\stock\trading.py 706行的代码
@@ -125,7 +136,7 @@ def get_bars(symbol=None, freq='D', limit=200):
 # symbol, freq, adj, limit = '399986.CSI#I', '30min', 'qfq', 200
 symbol, freq, adj, limit = '002624.SZ#E', 'D', 'qfq', 200
 
-res = get_bars_v1(symbol, freq)
+# res = get_bars_v1(symbol, freq)
 
 # res = get_bars(symbol, freq)
 # res = get_bars('399986.CSI#I','D')
@@ -134,11 +145,13 @@ res = get_bars_v1(symbol, freq)
 # pro = ts.pro_api()
 # res = ts.pro_bar(ts_code=symbol, freq=freq, limit=limit)
 
-print(len(res), res.columns, )
+# print(len(res), res.columns, )
 # if not res.empty:
 #     print(res.iloc[-1].to_dict())
 
 # for index, row in res.iterrows():
 #     print(row.to_dict())
 
-print(res)
+# print(res)
+
+get_top30()

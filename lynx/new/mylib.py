@@ -332,7 +332,7 @@ def get_fxs(bars) -> List[FX]:
 
 # 递归找出所有笔
 def get_bis(bars_ubi, bi_list=[]):
-    print("执行函数", len(bi_list), len(bars_ubi))
+    print(f"执行函数get_bis,笔数量:{len(bi_list)}, 入k数量:{len(bars_ubi)}")
 
     if len(bars_ubi) < 3:
         return bars_ubi, bi_list
@@ -341,14 +341,14 @@ def get_bis(bars_ubi, bi_list=[]):
 
     # 退出条件 bar长度不变，说明找完了
     if len(bars_ubi_) == len(bars_ubi):
-        logger.info(f"2找不到笔:,剩余k线数为{len(bars_ubi_)}")
+        logger.info(f"2找不到笔,余k数量：{len(bars_ubi_)}")
         print(len(bi_list), len(bars_ubi), len(bars_ubi_))
         return bars_ubi, bi_list
     else:
         # 不退出，则继续执行
         if isinstance(bi, BI): # 否则，bi加到bi列表，再递归
             bi_list.append(bi)
-            print("找到笔", bi.fx_b.dt, len(bi_list), len(bars_ubi), len(bars_ubi_))
+            print(f"找到笔，右分型点{bi.fx_b.dt}, 笔数量：{len(bi_list)}, 入k数量：{len(bars_ubi)}, 余k数量{len(bars_ubi_)}")
             bars_ubi = bars_ubi_
             # logger.info(f"2找到一笔:{tostr(bi.fx_a.dt), tostr(bi.fx_b.dt)},剩余k线为{len(bars_ubi_), tostr(bars_ubi_.iloc[0]['dt'])}")
             last_bars, last_bis = get_bis(bars_ubi, bi_list)
