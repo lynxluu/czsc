@@ -79,15 +79,19 @@ def get_ft():
     # 初始化pro接口
     pro = ts.pro_api()
 
-    # 获取铁矿石期货的交易所代码
-    # df = pro.fut_basic(exchange='DCE', fut_type='2', fields='ts_code,symbol,name,list_date,delist_date')
-
-    ts_code = 'IL9'
+    ts_code = 'I2309.DCE'
     freq = '30min'
-    # fut_daily 日线， ft_mins 分时获取铁矿石期货的30分钟行情数据
-    # df = pro.fut_daily(ts_code=ts_code)
-    # df = pro.ft_mins(ts_code=ts_code, freq='30min')
-    df = pro.ft_mins(ts_code=ts_code, start_date='20230501', end_date='20230606', freq=freq, limit=200)
+    # freq = 'D'
+    if 'min' in freq:
+        # df = pro.ft_mins(ts_code=ts_code, start_date='20230501', end_date='20230606', freq=freq, limit=200)
+        df = pro.ft_mins(ts_code=ts_code, freq=freq, limit=200)
+    else:
+        # df = pro.fut_daily(ts_code=ts_code, start_date='20220101', end_date='20230606', limit=200)
+        # df = pro.fut_daily(ts_code=ts_code, start_date='20230101', end_date='20230606')
+        # df = pro.fut_daily(ts_code='CU1811.SHF', start_date='20180101', end_date='20181113')
+        df = pro.fut_daily(ts_code=ts_code, limit=200)
+
+
 
     return df
 
@@ -142,6 +146,9 @@ symbol, freq, adj, limit = '002624.SZ#E', 'D', 'qfq', 200
 # res = get_bars('399986.CSI#I','D')
 # res = get_bars('002624.SH','30min')
 
+# 期货
+res = get_ft()
+
 # pro = ts.pro_api()
 # res = ts.pro_bar(ts_code=symbol, freq=freq, limit=limit)
 
@@ -152,6 +159,6 @@ symbol, freq, adj, limit = '002624.SZ#E', 'D', 'qfq', 200
 # for index, row in res.iterrows():
 #     print(row.to_dict())
 
-# print(res)
+print(res)
 
-get_top30()
+# get_top30()

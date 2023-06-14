@@ -1,3 +1,4 @@
+import re
 
 import tushare as ts
 import pandas as pd
@@ -56,12 +57,15 @@ def format_bars(df, freq):
     df['freq'] = freq
 
     df['elements'] = [[0,1,0]] * len(df)
-    # df['elements'] = "0, 1, 0"
 
     # 选取需要的字段
     # fields = ['dt', 'ts_code', 'freq', 'open', 'high', 'low', 'close', 'vol', 'amount']
     fields = ['dt', 'symbol', 'freq', 'open', 'high', 'low', 'close', 'vol', 'amount', 'elements']
     df = df[fields]
+
+    # df = df.set_index('dt')
+    df = df.sort_values('dt')
+    # df = df.reset_index(drop=True)
 
     # df['elements'] = np.nan
     # df['id'] = df.reset_index().index
@@ -74,11 +78,12 @@ def format_bars(df, freq):
 def format_csv(df):
     # 从csv读取后，dt转换成日期，elements转换成int列表
     df['dt'] = pd.to_datetime(df['dt'], format=dt_fmt)
-    df['elements'] = df['elements'].apply(lambda x: [int(i) for i in x.split(',')])
+    # eval()将字符串中的数据类型转换为对应的Python对象
+    df['elements'] = df['elements'].apply(lambda x: eval(x))
+    # df['elements'] = df['elements'].apply(lambda x: [int(i) for i in re.sub(r'[\[\]]', '', x).split(',')])
 
     # print(df.head())
     return df
-
 
 
 # 返回单个级别的k线
@@ -92,7 +97,9 @@ def get_bars(symbol, freq='D', adj='qfq', limit=200, api=1):
             if asset == 'I':    #指数不提供复权参数
                 adj = None
             elif asset == 'FD' and freq in ('W', 'M'):  #基金不提供周线月线
+                print("基金不提供周线月线")
                 return df
+            # elif asset == 'FT':
 
             # 要想获取比较多的分钟k线，需要指定start_date
             start_date = '20230401' if 'min' in freq else None
@@ -108,7 +115,7 @@ def get_bars(symbol, freq='D', adj='qfq', limit=200, api=1):
     except Exception as e:
         print(e.with_traceback())
 
-    # logger.info(f"获得{len(df)}根k线。")
+    logger.info(f"获得{len(df)}根k线。")
     if len(df) > 0:
         df = format_bars(df, freq)
         # debug取不足要求k线数量的
@@ -169,6 +176,7 @@ def get_bars_4lx(symbol, adj='qfq', limit=200, api=1):
 
     logger.info(f"得到 {len(data)} 根k线。")
     return data
+
 
 # 检查包含关系
 def is_contained(k1:pd.DataFrame, k2:pd.DataFrame) -> bool:
@@ -304,11 +312,11 @@ def check_fx(k1, k2, k3):
     # Mark.G 顶分，Mark.D 底分；fx 分型的高低点。
     fx = None
     if k1['high'] < k2['high'] > k3['high'] and k1['low'] < k2['low'] > k3['low']:
-        fx = FX(symbol=k1['symbol'], dt=k2['dt'], mark=Mark.G, high=k2['high'],
-                low=min(k1['low'], k2['low']), fx=k2['high'], elements=[k1, k2, k3])
+        fx = FX(symbol=k2['symbol'], dt=k2['dt'], mark=Mark.G, high=k2['high'],
+                low=min(k1['low'], k3['low']), fx=k2['high'], elements=[k1, k2, k3])
 
     if k1['low'] > k2['low'] < k3['low'] and k1['high'] > k2['high'] < k3['high']:
-        fx = FX(symbol=k1['symbol'], dt=k2['dt'], mark=Mark.D, high=max(k1['high'], k3['high']),
+        fx = FX(symbol=k2['symbol'], dt=k2['dt'], mark=Mark.D, high=max(k1['high'], k3['high']),
                 low=k2['low'], fx=k2['low'], elements=[k1, k2, k3])
 
     # if fx:
@@ -325,8 +333,7 @@ def get_fxs(bars) -> List[FX]:
         fx: FX = check_fx(bars.iloc[i-1], bars.iloc[i], bars.iloc[i+1])
         if isinstance(fx, FX):
             fxs.append(fx)
-
-    print(f"找到{len(fxs)}个分型:")
+    print(f"找到{len(fxs)}个分型,last: {tostr(fxs[-1].dt),fxs[-1].mark} ") if fxs else print(f"找到{len(fxs)}个分型")
     return fxs
 
 
@@ -337,36 +344,138 @@ def get_bis(bars_ubi, bi_list=[]):
     if len(bars_ubi) < 3:
         return bars_ubi, bi_list
 
-    bars_ubi_, bi = check_bi2(bars_ubi)
+    bars_ubi_, bi = check_bi(bars_ubi)
 
-    # 退出条件 bar长度不变，说明找完了
-    if len(bars_ubi_) == len(bars_ubi):
-        logger.info(f"2找不到笔,余k数量：{len(bars_ubi_)}")
-        print(len(bi_list), len(bars_ubi), len(bars_ubi_))
+    # 退出条件 【找不到 bi == bars_ubi_ 长度不变】；说明找完了
+    # if len(bars_ubi_) == len(bars_ubi):
+    if not isinstance(bi, BI):
+        logger.info(f"2找不到笔,笔数量：{len(bi_list)}, 入k数量：{len(bars_ubi)},余k数量：{len(bars_ubi_)}")
         return bars_ubi, bi_list
     else:
         # 不退出，则继续执行
-        if isinstance(bi, BI): # 否则，bi加到bi列表，再递归
-            bi_list.append(bi)
-            print(f"找到笔，右分型点{bi.fx_b.dt}, 笔数量：{len(bi_list)}, 入k数量：{len(bars_ubi)}, 余k数量{len(bars_ubi_)}")
-            bars_ubi = bars_ubi_
-            # logger.info(f"2找到一笔:{tostr(bi.fx_a.dt), tostr(bi.fx_b.dt)},剩余k线为{len(bars_ubi_), tostr(bars_ubi_.iloc[0]['dt'])}")
-            last_bars, last_bis = get_bis(bars_ubi, bi_list)
+        # if isinstance(bi, BI): # 否则，bi加到bi列表，再递归
+        bi_list.append(bi)
+        logger.info(f"找到笔，{tostr(bi.fx_a.dt),tostr(bi.fx_b.dt)}, 笔数量：{len(bi_list)}, 入k数量：{len(bars_ubi)}, 余k数量{len(bars_ubi_)}")
+        bars_ubi = bars_ubi_
+        # logger.info(f"2找到一笔:{tostr(bi.fx_a.dt), tostr(bi.fx_b.dt)},剩余k线为{len(bars_ubi_), tostr(bars_ubi_.iloc[0]['dt'])}")
+        last_bars, last_bis = get_bis(bars_ubi, bi_list)
 
-        # if bi_list:
-        #     # 全笔步骤4：如果当前笔被破坏，丢弃当前bi，将当前笔的bars与bars_ubi进行合并
-        #     last_bi = bi_list[-1]
-        #     if (last_bi.direction == Direction.Up and bars_ubi.iloc[0]['high'] > last_bi.high) \
-        #             or (last_bi.direction == Direction.Down and bars_ubi.iloc[0]['low'] < last_bi.low):
-        #         bars_ubi = last_bi.bars[:-1] + [x for _, x in bars_ubi.iterrows() if
-        #                                         x['dt'] >= last_bi.bars.iloc[-1]['dt']]
-        #         bi_list.pop(-1)
-        #         logger.info(
-        #             f"笔被破坏:{last_bi.fx_a.dt, last_bi.fx_b.dt},剩余k线为{len(bars_ubi), bars_ubi.iloc[0]['dt']}")
-        #
+    if bi_list:
+        # 全笔步骤4：如果当前笔被破坏，丢弃当前bi，将当前笔的bars与bars_ubi进行合并
+        last_bi = bi_list[-1]
+        if (last_bi.direction == Direction.Up and bars_ubi.iloc[-1]['high'] > last_bi.high) \
+                or (last_bi.direction == Direction.Down and bars_ubi.iloc[-1]['low'] < last_bi.low):
+            bars_ubi = last_bi.bars[:-1] + [x for _, x in bars_ubi.iterrows() if
+                                            x['dt'] >= last_bi.bars.iloc[-1]['dt']]
+            bi_list.pop(-1)
+            logger.info(
+                f"笔被破坏:{last_bi.fx_a.dt, last_bi.fx_b.dt},剩余k线为{len(bars_ubi), bars_ubi.iloc[0]['dt']}")
 
     # 执行到最后要返回一个值，否则会变成None
     return last_bars, last_bis
+
+
+def get_bis2(n_bars, bi_list=[]):
+    print(f"执行函数get_bis2,笔数量:{len(bi_list)}, 入k数量:{len(n_bars)}")
+    if len(n_bars) < 4:  # 最小4k成笔
+        return n_bars, bi_list
+
+    bars_ubi = pd.DataFrame()
+    # 循环进入n_bars
+    for n, row in n_bars.iterrows():
+        bars_ubi = pd.concat([bars_ubi, row.to_frame().T], ignore_index=True)
+        print(f"执行第{n}根k-{tostr(row['dt'])}: ", end='')
+
+        if len(bars_ubi) < 4: # 最小4k成笔
+            continue
+        bars_ubi_, bi = check_bi2(bars_ubi)
+        if isinstance(bi, BI):
+            bi_list.append(bi)
+            logger.info(f"找到笔，{tostr(bi.fx_a.dt),tostr(bi.fx_b.dt)}, 笔数量：{len(bi_list)}, 入k数量：{len(bars_ubi)}, 余k数量{len(bars_ubi_)}")
+            bars_ubi = bars_ubi_
+
+        if bi_list:
+            last_bi = bi_list[-1]
+            if (last_bi.direction == Direction.Up and bars_ubi.iloc[-1]['high'] > last_bi.high) \
+                    or (last_bi.direction == Direction.Down and bars_ubi.iloc[-1]['low'] < last_bi.low):
+                bars_ubi = pd.concat([last_bi.bars.iloc[:-1], bars_ubi[bars_ubi['dt'] >= last_bi.bars.iloc[-1]['dt']]],
+                                     ignore_index=True)
+                bi_list.pop(-1)
+                logger.info(f"{last_bi.direction},{tostr(last_bi.fx_a.dt),tostr(last_bi.fx_b.dt),tostr(last_bi.fx_b.dt)},{last_bi.high}, {tostr(bars_ubi.iloc[-1]['dt'])},{bars_ubi.iloc[-1]['high']}" )
+                logger.info(f"第{len(bi_list)+1}笔被破坏:{tostr(last_bi.fx_a.dt), tostr(last_bi.fx_b.dt)}")
+                logger.info(f"剩余k线长度{len(bars_ubi)}, 起始{tostr(bars_ubi.iloc[0]['dt'])},结束{tostr(bars_ubi.iloc[-1]['dt'])}")
+
+
+    # 执行到最后要返回一个值，否则会变成None
+    return bars_ubi, bi_list
+
+
+def check_bi(bars):
+    """输入一串无包含关系K线，查找其中的一笔
+
+    :param bars: 无包含关系K线列表
+    :param benchmark: 当下笔能量的比较基准
+    :return:
+    """
+    # 一笔条件，两个分型点之间的最小k线数
+    min_bi_len = 4
+    fxs = get_fxs(bars)
+    if len(fxs) < 2:
+        return None, bars
+
+    fx_a = fxs[0]
+    # 笔步骤1 找出两个相反的分型 第一个分型fx_a  反向极值分型fx_b #用第一个分型是为了好递归
+    try:
+        if fxs[0].mark == Mark.D:
+            # fx_a是底的话 朝上，找出所有fx点大于fx_a的fx点的顶分型fxs_b的集合，找不到返回None
+            direction = Direction.Up
+            fxs_b = [x for x in fxs if x.mark == Mark.G and x.dt > fx_a.dt and x.fx > fx_a.fx]
+            if not fxs_b:
+                return bars, None
+
+
+        elif fxs[0].mark == Mark.G:
+            # fx_a是顶的话 朝下，求最低的底分型 fx_b
+            direction = Direction.Down
+            fxs_b = [x for x in fxs if x.mark == Mark.D and x.dt > fx_a.dt and x.fx < fx_a.fx]
+            if not fxs_b:
+                return bars, None
+
+        else:
+            raise ValueError
+    except:
+        logger.exception("笔识别错误")
+        return bars, None
+
+    for fx_b in fxs_b:
+        # 打印找出的 fx_a和 fx_b
+        # logger.info(f"-------笔步骤1b- 分型范围{tostr(fx_a.dt), tostr(fx_b.dt)}")
+        bars_a = bars[bars['dt'].between(fx_a.elements[1]['dt'], fx_b.elements[1]['dt'])]
+        bars_b = bars[bars['dt'] >= fx_b.elements[0]['dt']]
+        cdks = []
+
+        # 计算rawkcnt fx_a和fx_b之间的未合并k线个数
+        rawkcnt = sum(sum(bar['elements']) for _, bar in bars_a.iterrows()) - bars_a.iloc[0]['elements'][0] - bars_a.iloc[-1]['elements'][-1]
+        newkcnt = len(bars_a)
+        cdkcnt = len(cdks)
+
+        not_include = (fx_a.high > fx_b.high and fx_a.low > fx_b.low) \
+                     or (fx_a.high < fx_b.high and fx_a.low < fx_b.low)
+
+        flag_bi = (newkcnt > min_bi_len) or \
+                (newkcnt == min_bi_len and rawkcnt >= 5) or \
+                  (newkcnt <= min_bi_len and cdkcnt)
+
+        condition = not_include and flag_bi
+
+        # 笔步骤3 条件满足，生成笔对象实例bi，将两端分型中包含的所有分型放入笔的fxs，所有k线放入笔的bars，根据起点分型设置笔方向
+        if condition:
+            logger.info(f"######笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not_include, flag_bi, newkcnt, rawkcnt, cdkcnt}")
+            fxs_ = [x for x in fxs if fx_a.elements[0]['dt'] <= x.dt <= fx_b.elements[2]['dt']]
+            bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
+            return bars_b, bi
+
+    return bars, None
 
 def check_bi2(bars):
     """输入一串无包含关系K线，查找其中的一笔
@@ -412,6 +521,7 @@ def check_bi2(bars):
         bars_b = bars[bars['dt'] >= fx_b.elements[0]['dt']]
         cdks = []
 
+        # 计算rawkcnt fx_a和fx_b之间的未合并k线个数
         rawkcnt = sum(sum(bar['elements']) for _, bar in bars_a.iterrows()) - bars_a.iloc[0]['elements'][0] - bars_a.iloc[-1]['elements'][-1]
         newkcnt = len(bars_a)
         cdkcnt = len(cdks)
@@ -427,14 +537,14 @@ def check_bi2(bars):
 
         # 笔步骤3 条件满足，生成笔对象实例bi，将两端分型中包含的所有分型放入笔的fxs，所有k线放入笔的bars，根据起点分型设置笔方向
         if condition:
-            # logger.info(f"######笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not_include, flag_bi, newkcnt, rawkcnt, cdkcnt}")
+            logger.info(f"######笔步骤3-笔范围{tostr(fx_a.dt), tostr(fx_b.dt)}, 笔识别{not_include, flag_bi, newkcnt, rawkcnt, cdkcnt}")
             fxs_ = [x for x in fxs if fx_a.elements[0]['dt'] <= x.dt <= fx_b.elements[2]['dt']]
             bi = BI(symbol=fx_a.symbol, fx_a=fx_a, fx_b=fx_b, fxs=fxs_, direction=direction, bars=bars_a)
             return bars_b, bi
 
     return bars, None
 
-def check_bi(bars):
+def check_bi0(bars):
     """输入一串无包含关系K线，查找其中的一笔
 
     :param bars: 无包含关系K线列表
