@@ -1,17 +1,89 @@
 gpt脚本：
 
+## 腾讯接口
+哪里能找到https://web.ifzq.gtimg.cn/appstock/app/kline/kline这个接口的使用手册
+
+参考这篇
+https://blog.csdn.net/geofferysun/article/details/114752182
+https://www.cnblogs.com/interdrp/p/14159671.html
+
+详情
+http://qt.gtimg.cn/q=s_sh600519
+http://qt.gtimg.cn/q=sh600519
+
+
+日线数据
+接口1
+/1.https://web.ifzq.gtimg.cn/appstock/app/fqkline/get 固定访间链接
+/2.param=代码，日k,开始日期，结束日期，获取多少个交易日，前复权
+/2.1 usAAPL.0Q股票代码，这里是us是美股，AAPL是苹果，“.0Q"是美股拼接后缀，其他不需要拼接
+/2.2500代表获取多少个交易日，500实际查出来的是501条数据，多一条
+/2.3qfq前复权
+/上海，茅台【sh600519】 y
+https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,2020-3-1,2021-3-1,500,qfq
+/港股，小米【hk01810】 y
+https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk01810,day,2020-3-1,2021-3-1,500,qfq
+/美股，苹果【usAAPL】，需要拼接".OQ”
+https //web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL.0Q,day,2020-3-1,2021-3-1,500,qfq
+
+接口2
+//日K后复权 y
+//320代表查询几天的历史数据,1年为320两年为640， //美股需要拼接“.0Q”
+https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_var=kline_dayhfq&param=sh600519,day,,,320,hfq&r=0.9866
+
+一天内的1分钟分时行情 y
+https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=sh600519
+
+
+1分钟 n
+https://web.ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh600519,m1,,32000
+//5分钟
+https://web.ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh600519,m5,,32000
+//15分钟
+https://web.ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh600519,m15,,32000
+/30分钟
+https://web.ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh600519,m30,,32000
+//60分钟
+https://web.ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh600519,m60,,32000
+
+https://web3.ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh600519,m30,20220101,20220131,640
+
+
+//5日分时 y
+https://web.ifzq.gtimg.cn/appstock/app/day/query?code=sh600519
+
+//TOD0美股拼接需要us,后缀有的需要拼接“.0Q”,这里我还没搞明白规则 y
+https://web.ifzq.gtimg.cn/appstock/app/dayus/query?code=us.DJI
+https://web.ifzq.gtimg.cn/appstock/app/dayus/query?code=usGOOD.0Q
+
+//美股分时，以Google请求为例： y
+/l.minute改为：UsMinute
+//2.股票代码需要拼接“.0Q”
+https://web.ifzq.gtimg.cn/appstock/app/UsMinute/query?code=usGOOG.0Q
+
+## akshare
+
+## tushare
+
+## 聚宽
+可以试用3个月
+
+## 雅虎财经
+
+https://query1.finance.yahoo.com/v8/finance/chart/000001.SS?interval=30m&range=60d
 
 ## 原始k线 bars
 定义一个函数，
 输入: symbol, freq, adj,sdt,edt,limit
-symbol 类型字符串，格式如aaaaaa.bb#cc，aa表示代码，bb表示市场，cc表示类型股票E，指数I，基金FD，期货FT
+symbol 类型字符串，格式如aaaaaa.bb#cc，aa表示代码，bb表示市场，cc表示类型股票E，指数I，基金FD，期货FT.
+对symbol要进行处理，取得 aaaaaa.bb作为 ts_code， 取得cc作为 asset
 freq 类型字符串，表示频率，有'5min' ,'15min', '30min', '60min', 'D',' 'W','M'几种。
 adj 类型字符串，表示复权方式 有'qfq', 'hfq', None三种。
 sdt,edt 表示开始时间和结束时间，可以不输入
 limit 为整数，表示取最近的k线个数
 输出：一组dataframe格式的k线
 
-接收输入参数，从akshare接口获取df后，(akshare输出的df列不一定相同)对df进行处理，使得他包含下列列的k线，返回输出
+接收输入参数（ts_code，asset， freq, adj,sdt,edt,limit），从akshare接口获取df后，(akshare输出的df列不一定相同)对df进行处理，使得他包含下列列的k线，返回输出
 'dt', 'symbol', 'freq', 'open', 'high', 'low', 'close', 'vol', 'amount', 'elements'
 elements是自定义的整数列表 =[0,1,0]
 

@@ -7,14 +7,16 @@ def get_one():
     # symbol = '000001.SH#I'
     # symbol = 'I2309.DCE#FT'
     # api = 1
-    print(symbol, freq, adj, api)
+    file_dir = rf"data\{symbol}_{freq}_{adj}_{api}.csv"
+    # file_dir = f"{symbol}_{freq}_{adj}_{api}.csv"
+    print(symbol, freq, adj, api, file_dir)
 
-    # bars = get_bars(symbol, freq, adj, api=api)
+    bars = get_bars(symbol, freq, adj, api=api)
+    bars.to_csv(file_dir)
     # print(bars.dtypes, bars.tail(1).to_string())
-    # bars.to_csv(f"data\{symbol}_{freq}_{adj}_{api}.csv")
 
     # 读完文件后，要修改数据类型
-    df = pd.read_csv(f"data\{symbol}_{freq}_{adj}_{api}.csv")
+    df = pd.read_csv(file_dir)
     # print(df.dtypes)
     if not df.empty:
         bars = format_csv(df)

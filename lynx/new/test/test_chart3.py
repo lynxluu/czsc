@@ -1,3 +1,6 @@
+import os
+import webbrowser
+
 from pyecharts.charts import Line
 from pyecharts import options as opts
 
@@ -39,4 +42,9 @@ line2.add_yaxis("", y_data, is_connect_nones=True, is_smooth=True)
 
 
 line.overlap(line2)
-line.render("cdk_chart.html")
+# line.render("cdk_chart.html")
+
+home_path = os.path.expanduser("~")
+file_html = os.path.join(home_path, "test_cdk.html")
+line.render(file_html)
+webbrowser.open(file_html)

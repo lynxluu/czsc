@@ -1,3 +1,6 @@
+import os
+import webbrowser
+
 from pyecharts import options as opts
 from pyecharts.charts import Line
 
@@ -45,4 +48,9 @@ line.set_global_opts(
 
 # 叠加渲染图表
 line.overlap(line1)
-line.render("rect1.html")
+# line.render("rect1.html")
+
+home_path = os.path.expanduser("~")
+file_html = os.path.join(home_path, "test_cdk.html")
+line.render(file_html)
+webbrowser.open(file_html)
