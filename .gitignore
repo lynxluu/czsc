@@ -111,6 +111,6 @@ venv.bak/
 .mypy_cache/
 df
 examples/lynx/prepare_data.py
-*.csv
 *.docx
 lynx/new/data/auth.pwd
+lynx/new/cache

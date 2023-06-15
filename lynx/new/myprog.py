@@ -2,21 +2,24 @@ from mylib import *
 
 
 def get_one():
-    # symbol, freq, adj, api = '002624.SZ#E', '30min', 'qfq', 2
-    symbol, freq, adj, api = '000001.SH#I', 'D', 'qfq', 2
-    # symbol = '000001.SH#I'
+    symbol, freq, adj, api = '002624.SZ#E', 'D', 'qfq', 2
+    # symbol, freq, adj, api = '000001.SH#I', 'D', 'qfq', 2
+    symbol = '000999.SZ#E'
     # symbol = 'I2309.DCE#FT'
+    # freq = '5min'
     # api = 1
-    file_dir = rf"data\{symbol}_{freq}_{adj}_{api}.csv"
-    # file_dir = f"{symbol}_{freq}_{adj}_{api}.csv"
-    print(symbol, freq, adj, api, file_dir)
+    filepath = rf"cache\{symbol}_{freq}_{adj}_{api}.csv"
+    # filepath = f"{symbol}_{freq}_{adj}_{api}.csv"
+    print(symbol, freq, adj, api, filepath)
 
-    bars = get_bars(symbol, freq, adj, api=api)
-    bars.to_csv(file_dir)
-    # print(bars.dtypes, bars.tail(1).to_string())
+    ## 获取k线，写入缓存
+    if not check_file(filepath):
+        bars = get_bars(symbol, freq, adj, api=api)
+        bars.to_csv(filepath)
+        # print(bars.dtypes, bars.tail(1).to_string())
 
     # 读完文件后，要修改数据类型
-    df = pd.read_csv(file_dir)
+    df = pd.read_csv(filepath)
     # print(df.dtypes)
     if not df.empty:
         bars = format_csv(df)
@@ -25,7 +28,8 @@ def get_one():
 
     # bi, bars_ubi = check_bi(n_bars)
 
-    l_bars, bis = get_bis2(n_bars)
+    # bis, l_bars = get_bis2(n_bars)
+    bis, l_bars = get_bis(n_bars)
 
     # fxs = get_fxs(n_bars)
     # for fx in fxs:
