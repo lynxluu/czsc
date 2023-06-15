@@ -2,8 +2,8 @@ from mylib import *
 
 
 def get_one():
-    # symbol, freq, adj, api = '002624.SZ#E', '30min', 'qfq', 2
-    symbol, freq, adj, api = '000001.SH#I', 'D', 'qfq', 2
+    symbol, freq, adj, api = '002624.SZ#E', '30min', 'qfq', 2
+    # symbol, freq, adj, api = '000001.SH#I', 'D', 'qfq', 2
     # symbol = '000001.SH#I'
     # symbol = 'I2309.DCE#FT'
     # api = 1
@@ -22,10 +22,12 @@ def get_one():
         bars = format_csv(df)
 
     n_bars = merge_bars(bars)
-
+    # 打印包含 NaN 值的行
+    nan_rows = n_bars[n_bars['amount'].isna()]
+    print(nan_rows)
     # bi, bars_ubi = check_bi(n_bars)
 
-    l_bars, bis = get_bis2(n_bars)
+    # l_bars, bis = get_bis(n_bars)
 
     # fxs = get_fxs(n_bars)
     # for fx in fxs:
