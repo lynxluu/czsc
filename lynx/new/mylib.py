@@ -6,7 +6,7 @@ import tushare as ts
 import pandas as pd
 import numpy as np
 
-from czsc.data.jq import dt_fmt
+# from czsc.data.jq import dt_fmt
 from myobj import Mark, Direction, RawBar, NewBar, FX, CDK, BI
 from typing import List
 from loguru import logger
@@ -308,16 +308,18 @@ def remove_include(k1, k2, k3):
             open_ = low
             close = high
 
-        # 包含 则量叠加，合并k线数叠加
+        # 包含 则量叠加，成交额叠加，合并k线数叠加
         vol = k2['vol'] + k3['vol']
+        amount = k2['amount'] + k3['amount']
         # elements = k2['elements'] + k3['elements']
+        # logger.info(f"合并成交额：{amount,k2['amount'],k3['amount']}")
 
         # elements = [x for x in k2['elements'] if x['dt'] != k3['dt']] + [ k3 ]
         # elements = Nones
         # k4 = {'symbol': k3['symbol'], 'id': k2['id'], 'freq': k2['freq'], 'dt': dt,
         #       'open': open_, 'close': close, 'high': high, 'low': low, 'vol': vol, 'elements': elements}
-        k4 = {'symbol': k3['symbol'], 'freq': k2['freq'], 'dt': dt,
-              'open': open_, 'close': close, 'high': high, 'low': low, 'vol': vol, 'elements': elements}
+        k4 = {'symbol': k2['symbol'], 'freq': k2['freq'], 'dt': dt,
+              'open': open_, 'close': close, 'high': high, 'low': low, 'vol': vol, 'amount': amount, 'elements': elements }
         return True, pd.DataFrame([k4])
     else:
         k4 = k3.copy()

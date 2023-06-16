@@ -25,7 +25,9 @@ def get_one():
         bars = format_csv(df)
 
     n_bars = merge_bars(bars)
-
+    # 打印包含 NaN 值的行
+    nan_rows = n_bars[n_bars['amount'].isna()]
+    print(nan_rows)
     # bi, bars_ubi = check_bi(n_bars)
 
     # bis, l_bars = get_bis2(n_bars)
