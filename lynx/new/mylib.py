@@ -590,17 +590,16 @@ def check_bi2(bars):
     return None, bars
 
 
-def check_bi3(fx1, fx2, fx3):
-    # 成笔条件 123都是反向分型
+def check_kbi(n_bars):
+    return
 
-    bars_12 = fx1.dt和fx2.dt之间的k +左右
-    bars_12r = fx1.dt和fx2.dt之间的k 减左右中间
-    # 上下上，
-    12不包含：fx1.high>fx2.high and fx1.low>fx2.low
-    23不包含：fx2.high<fx3.high and fx2.low<fx3.low
-    # 下上下
-    12不包含：fx1.high < fx2.high and fx1.low < fx2.low
-    23不包含：fx2.high > fx3.high and fx2.low > fx3.low
+def check_lbi(bars):
+    return
+
+def check_wbi(bars):
+    return
+
+
 def get_bis3(fxs):
     if len(fxs) < 2:
         return
