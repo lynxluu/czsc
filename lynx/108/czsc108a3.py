@@ -79,7 +79,8 @@ def main():
     # rel_urls = get_links(target_url)[:20]
     # rel_urls = get_links(target_url)[20:40]
     # rel_urls = get_links(target_url)[40:60]
-    rel_urls = get_links(target_url)[60:80]
+    # rel_urls = get_links(target_url)[60:80]
+    rel_urls = get_links(target_url)[60:61]
     # rel_urls = get_links(target_url)[80:100]
     # rel_urls = get_links(target_url)[100:109]
     # print(rel_urls)

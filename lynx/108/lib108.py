@@ -101,10 +101,11 @@ def get_image_dpi(image):
             inches = math.sqrt(image_size / (pixels * 3)) / 96 # JPEG为有损压缩
             c_dpi = int(96 * inches)
             
-            # print(dpi)
+            print(width,height,inches,c_dpi)
             return c_dpi
-        
-        return dpi[0]
+        else:
+            return max(dpi[0],dpi[0])
+ 
         
 
 
