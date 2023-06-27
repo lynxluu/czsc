@@ -62,18 +62,28 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 单线程循环
 def main():
     target_url = get_abs_url('/stocks/wolves')
+    # print(target_url)
+    
     # file_path = os.path.join(r"D:\usr\doc", 'czsc108' + '.docx')
 
     ext = datetime.now().strftime('%y%m%d%H%M%S')
     file_path = os.path.join(f'czsc108a3_{ext}.docx')
     # file_path = os.path.join('czsc108.docx')
 
-    # print(target_url)
+
 
     # 获取所有相关相对链接
-    rel_urls = get_links(target_url)[7:9]
+    # rel_urls = get_links(target_url)[7:9]
     # rel_urls = get_links(target_url)[84:85]
+    # rel_urls = get_links(target_url)[:109]
+    # rel_urls = get_links(target_url)[:20]
+    # rel_urls = get_links(target_url)[20:40]
+    # rel_urls = get_links(target_url)[40:60]
+    rel_urls = get_links(target_url)[60:80]
+    # rel_urls = get_links(target_url)[80:100]
+    # rel_urls = get_links(target_url)[100:109]
     # print(rel_urls)
+    # return
 
     document = Document()
     set_format(document)
@@ -98,6 +108,9 @@ def main():
         #     return
 
         response = get_response(url)
+        
+        if not response:
+            return
 
         soup = BeautifulSoup(response.content, 'html.parser')
         article = soup.find('article')
@@ -124,7 +137,13 @@ def main():
                 elif child.name == 'img':
                     # image_url = child['src']
                     image_url = get_abs_url(child['src'])
-                    document.add_picture(get_image(image_url), width=Inches(6))
+                    image = get_image(image_url)
+                    if image:
+                        # document.add_picture(image, width=Inches(6))
+                        if get_image_dpi(image) > 0:
+                            document.add_picture(image, width=Inches(6))
+                        else:
+                            print(f"图片无效:[{image_url}]")
                     # try:
                     #     image_response = requests.get(get_abs_url(image_url), stream=True)
                     #     image = io.BytesIO(image_response.content)
@@ -132,7 +151,8 @@ def main():
                     # except requests.exceptions.RequestException as e:
                     #     print(f"请求图片 {image_url} 失败: {e}")
                 elif child.name in ['h2', 'h3']:
-                    document.add_heading('回复', level=2)
+                    # document.add_heading('回复', level=2)
+                    document.add_paragraph('回复')
                 elif child.name == 'span':
                     document.add_paragraph(child.text)
                 elif child.name =='br':

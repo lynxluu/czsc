@@ -6,13 +6,15 @@ from docx.shared import Inches
 from io import BytesIO
 from docx.shared import Pt,Cm,Inches
 from docx.oxml.ns import qn
+from PIL import Image
+import math
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 """
 已实现的函数说明
 czsc108c1：多线程ok，图片不能显示
-czsc108c1：多线程ok，图片正常，文章日期有两个
+czsc108a3：多线程ok，图片正常，文章日期有两个
 """
 
 """
@@ -81,6 +83,37 @@ def add_image(url, document):
     image_bytes = BytesIO(response.content)
     document.add_picture(image_bytes, width=Inches(5))  # 设置图片
 
+
+
+def get_image_dpi(image):
+    # 判断图像的尺寸
+    with Image.open(image) as im:
+        width, height = im.size
+        # 计算图片大小
+        image_size = len(image.getbuffer())
+        dpi = im.info.get('dpi', (0, 0))
+        print(width,height,image_size,dpi)
+        # print(dpi)
+        if dpi[0] == 0 or dpi[1] == 0:
+            # 计算DPI
+            pixels = width * height
+            # inches = math.sqrt(image_size / (pixels * 3 / 2)) / 96  # PNG为无损压缩
+            inches = math.sqrt(image_size / (pixels * 3)) / 96 # JPEG为有损压缩
+            c_dpi = int(96 * inches)
+            
+            # print(dpi)
+            return c_dpi
+        
+        return dpi[0]
+        
+
+
+
+# 判断图像的宽度
+def get_image_width(image):
+    with Image.open(image) as im:
+        return im.size[0]
+    
 
 def get_image(url):
     print(f"------get_image:{url}")
