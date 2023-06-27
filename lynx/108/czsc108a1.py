@@ -30,7 +30,7 @@ for element in article.children:
 document.save('output.docx')
 
 
-按顺序爬取https://chzhshch.blog/stocks/005这个页面的article元素里的p标签，img标签等所有元素并写入到word文档
+# 按顺序爬取https://chzhshch.blog/stocks/005这个页面的article元素里的p标签，img标签等所有元素并写入到word文档
 
 import requests
 from bs4 import BeautifulSoup

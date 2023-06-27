@@ -1,3 +1,5 @@
+import os
+
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
@@ -9,7 +11,7 @@ from datetime import datetime
 
 # 定义爬取的网站地址和页面范围
 base_url = 'https://chzhshch.blog/stocks/'
-page_range = range(1, 3)
+page_range = range(1, 6)
 
 # 创建一个列表，用于保存爬取的文章内容
 articles = []
@@ -40,7 +42,7 @@ def crawl(page_number):
 
     # 将爬取的文章内容保存到列表中
     with lock:
-        articles.append((page_number,title, article.contents))
+        articles.append((page_number, title, article.contents))
 
 # 创建线程池，并启动多个线程进行爬取操作
 # def main():
@@ -138,7 +140,10 @@ for page_number, title, contents in articles:
     # print(page_number, title, contents)
 
 # 保存Word文档
-document.save('articles.docx')
+ext = datetime.now().strftime('%y%m%d%_H%M%S')
+file_path = os.path.join(f'czsc108c1_{ext}.docx')
+
+document.save(file_path)
 
 # if __name__ == "__main__":
 #     main()
