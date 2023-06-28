@@ -76,11 +76,11 @@ def main():
     # rel_urls = get_links(target_url)[7:9]
     # rel_urls = get_links(target_url)[84:85]
     # rel_urls = get_links(target_url)[:109]
-    # rel_urls = get_links(target_url)[:20]
+    rel_urls = get_links(target_url)[:20]
     # rel_urls = get_links(target_url)[20:40]
     # rel_urls = get_links(target_url)[40:60]
     # rel_urls = get_links(target_url)[60:80]
-    rel_urls = get_links(target_url)[60:61]
+    # rel_urls = get_links(target_url)[60:61]
     # rel_urls = get_links(target_url)[80:100]
     # rel_urls = get_links(target_url)[100:109]
     # print(rel_urls)
@@ -96,17 +96,7 @@ def main():
     # 获得绝对链接
     for rel_url in rel_urls:
         url = get_abs_url(rel_url)
-        # save_to_word3(url, file_path)
         urls.append(url)
-
-        # try:
-        #     print(f"processing {url}")
-        #     # response = requests.get(url)
-        #     response = requests.get(url, verify=False, proxies=None)
-        #     response.raise_for_status()  # 检查响应状态码是否为 200
-        # except requests.exceptions.RequestException as e:
-        #     print(f"请求页面 {url} 失败: {e}")
-        #     return
 
         response = get_response(url)
         
@@ -136,21 +126,10 @@ def main():
                 if child.name == 'p':
                     document.add_paragraph(child.text)
                 elif child.name == 'img':
-                    # image_url = child['src']
                     image_url = get_abs_url(child['src'])
-                    image = get_image(image_url)
-                    if image:
-                        # document.add_picture(image, width=Inches(6))
-                        if get_image_dpi(image) > 0:
-                            document.add_picture(image, width=Inches(6))
-                        else:
-                            print(f"图片无效:[{image_url}]")
-                    # try:
-                    #     image_response = requests.get(get_abs_url(image_url), stream=True)
-                    #     image = io.BytesIO(image_response.content)
-                    #     document.add_picture(image, width=Inches(6))
-                    # except requests.exceptions.RequestException as e:
-                    #     print(f"请求图片 {image_url} 失败: {e}")
+                    # add_image(image_url, document)
+                    document.add_paragraph(image_url)
+
                 elif child.name in ['h2', 'h3']:
                     # document.add_heading('回复', level=2)
                     document.add_paragraph('回复')

@@ -39,6 +39,13 @@ InsecureRequestWarning: Unverified HTTPS request is being made to host 'chzhshch
 Adding certificate verification is strongly advised
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# 3) DPI计算
+PPI = sqrt(水平像素数^2 + 垂直像素数^2) / 对角线长度（英寸）
+# 获取图片信息
+image_size = len(image.getbuffer())
+width, height = im.size
+# print(width,height,image_size,dpi)
 """
 
 # 根据相对地址获取可以访问的绝对地址
@@ -78,43 +85,26 @@ def get_links(url):
 
 
 def add_image(url, document):
-    # response = requests.get(url)
-    response = requests.get(url, verify=False, proxies=None)
-    image_bytes = BytesIO(response.content)
-    document.add_picture(image_bytes, width=Inches(5))  # 设置图片
+    image = get_image(url)
+    if image:
+        if get_image_dpi(image) > 0:
+            document.add_picture(image, width=Inches(6))
+        else:
+            print(f"图片无效:[{url}]")
+    return
 
 
 
 def get_image_dpi(image):
     # 判断图像的尺寸
     with Image.open(image) as im:
-        width, height = im.size
-        # 计算图片大小
-        image_size = len(image.getbuffer())
-        dpi = im.info.get('dpi', (0, 0))
-        print(width,height,image_size,dpi)
-        # print(dpi)
-        if dpi[0] == 0 or dpi[1] == 0:
-            # 计算DPI
-            pixels = width * height
-            # inches = math.sqrt(image_size / (pixels * 3 / 2)) / 96  # PNG为无损压缩
-            inches = math.sqrt(image_size / (pixels * 3)) / 96 # JPEG为有损压缩
-            c_dpi = int(96 * inches)
-            
-            print(width,height,inches,c_dpi)
-            return c_dpi
+        dpi = im.info.get('dpi', (0, 0))[0]
+        if dpi == 0:
+            # DPI无法计算，给个默认值吧
+            return 96
         else:
-            return max(dpi[0],dpi[0])
- 
-        
+            return dpi
 
-
-
-# 判断图像的宽度
-def get_image_width(image):
-    with Image.open(image) as im:
-        return im.size[0]
-    
 
 def get_image(url):
     print(f"------get_image:{url}")
@@ -166,3 +156,22 @@ def set_format(document):
     document.styles['Normal'].font.name = '微软雅黑'
     document.styles['Normal'].font.size = Pt(12)
     document.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), '微软雅黑')
+
+
+def add_reply(text, document):
+    # 添加段落
+    paragraph = document.add_paragraph()
+
+    # 添加文本
+    run = paragraph.add_run(text)
+
+    # 设置文本字体
+    font = run.font  # 获取文本的字体对象
+    font.name = '宋体'  # 设置字体名称
+    font.size = Pt(10)  # 设置字体大小
+    # font.bold = True  # 设置字体是否加粗
+    font.italic = True  # 设置字体是否倾斜
+    # font.underline = True  # 设置字体是否下划线
+
+    # # 设置段落对齐方式
+    # paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER  # 居中对齐
