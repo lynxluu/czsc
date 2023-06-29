@@ -46,6 +46,7 @@ PPI = sqrt(水平像素数^2 + 垂直像素数^2) / 对角线长度（英寸）
 image_size = len(image.getbuffer())
 width, height = im.size
 # print(width,height,image_size,dpi)
+# print(im.size,len(image.getbuffer()),dpi)
 """
 
 # 根据相对地址获取可以访问的绝对地址
@@ -90,9 +91,10 @@ def add_image(url, document):
         if get_image_dpi(image) > 0:
             document.add_picture(image, width=Inches(6))
         else:
-            print(f"图片无效:[{url}]")
+            # print(type(set_image_dpi(image)), type(image))
+            print(f"图片没有dpi信息，设默认dpi为96:{url}")
+            document.add_picture(set_image_dpi(image), width=Inches(6))
     return
-
 
 
 def get_image_dpi(image):
@@ -100,11 +102,30 @@ def get_image_dpi(image):
     with Image.open(image) as im:
         dpi = im.info.get('dpi', (0, 0))[0]
         if dpi == 0:
-            # DPI无法计算，给个默认值吧
             return 96
-        else:
-            return dpi
+        return dpi
 
+
+def set_image_dpi(image):
+    # 判断图像的尺寸
+    with Image.open(image) as im:
+        # 获取图片文件的后缀名
+        suffix = im.format.lower()
+
+        dpi = im.info.get('dpi', (0, 0))
+        if dpi[0] == 0 or dpi[1] == 0:
+            # DPI无法计算，给个默认值吧
+            im.info['dpi'] =(96,96)
+
+        # print(im.size, len(image.getbuffer()), dpi)
+
+        # 将 DPI 修改后的图片对象转换为二进制数据,存储到 BytesIO 对象,并返回
+        buffered = BytesIO()
+        im.save(buffered, format=suffix)
+        image_data = buffered.getvalue()
+        file_data = BytesIO(image_data)
+
+        return file_data
 
 def get_image(url):
     print(f"------get_image:{url}")

@@ -1,4 +1,5 @@
 import os
+import threading
 # import io
 from datetime import datetime
 from lib108 import *
@@ -89,29 +90,23 @@ def single_doc():
     document.save(file_path)
 
 
-# if __name__ == '__main__':
-#     main()
-# single_doc()
-
-def get_range():
-    target_url = get_abs_url('/stocks/wolves')
-    # print(target_url)
-
-    # file_path = os.path.join(r"D:\usr\doc", 'czsc108' + '.docx')
-
+def get_range(rel_urls):
+    f_start = rel_urls[0].split("/")[-1]
+    f_end = rel_urls[-1].split("/")[-1]
     ext = datetime.now().strftime('%y%m%d%H%M%S')
-    file_path = os.path.join(f'czsc108a3_{ext}.docx')
-    # file_path = os.path.join('czsc108.docx')
+    file_path = os.path.join(f'czsc108a4_{f_start}_{f_end}_{ext}.docx')
 
     # 获取所有相关相对链接
     # rel_urls = get_links(target_url)[7:9]
     # rel_urls = get_links(target_url)[84:85]
+    # rel_urls = get_links(target_url)[60:61]
+
     # rel_urls = get_links(target_url)[:109]
-    rel_urls = get_links(target_url)[:20]
+
+    # rel_urls = get_links(target_url)[:20]
     # rel_urls = get_links(target_url)[20:40]
     # rel_urls = get_links(target_url)[40:60]
     # rel_urls = get_links(target_url)[60:80]
-    # rel_urls = get_links(target_url)[60:61]
     # rel_urls = get_links(target_url)[80:100]
     # rel_urls = get_links(target_url)[100:109]
     # print(rel_urls)
@@ -119,9 +114,6 @@ def get_range():
 
     document = Document()
     set_format(document)
-    # document.styles['Normal'].font.name = '微软雅黑'
-    # document.styles['Normal'].font.size = Pt(12)
-    # document.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), '微软雅黑')
 
     urls = []
     # 获得绝对链接
@@ -158,8 +150,8 @@ def get_range():
                     document.add_paragraph(child.text)
                 elif child.name == 'img':
                     image_url = get_abs_url(child['src'])
-                    # add_image(image_url, document)
-                    document.add_paragraph(image_url)
+                    add_image(image_url, document)
+                    # document.add_paragraph(image_url)
 
                 elif child.name in ['h2', 'h3']:
                     # document.add_heading('回复', level=2)
@@ -187,7 +179,6 @@ def list_doc():
     file_path = os.path.join(f'czsc108a4_{ext}.docx')
     print(file_path)
 
-
     # 获取所有相关相对链接
     rel_urls = get_links(target_url)[7:9]
 
@@ -207,7 +198,48 @@ def list_doc():
         soup = BeautifulSoup(response.content, 'html.parser')
         article = soup.find('article')
         # content = article.contents
-        
+
         # 查找文章标题和发表时间
         title = article.find('h1').text.strip()
         ptime = article.find('blockquote').text.strip()
+
+# 定义线程的执行函数
+def multi_run(rel_url_list):
+    def process_rel_url(sublist):
+        get_range(sublist)
+
+    # 创建5个线程并启动
+    threads = []
+    for sublist in rel_url_list:
+        t = threading.Thread(target=process_rel_url, args=(sublist,))
+        threads.append(t)
+        t.start()
+
+    # 等待所有线程执行完成
+    for t in threads:
+        t.join()
+def main():
+    target_url = get_abs_url('/stocks/wolves')
+    rel_urls = get_links(target_url)[:109]
+
+    n = 20  # 切片大小为20
+    rel_url_list = [rel_urls[i:i + n] for i in range(0, len(rel_urls), n)]
+    # print(res)
+
+    #顺序执行
+    # for each in rel_url_list:
+    #     get_range(each)
+
+    #执行单个
+    get_range(rel_urls[60:80])
+    # get_range(rel_urls[66:67])
+
+    # 多线程执行
+    # multi_run(rel_url_list)
+
+
+if __name__ == '__main__':
+    main()
+
+
+
