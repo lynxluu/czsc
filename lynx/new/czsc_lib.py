@@ -91,10 +91,10 @@ def get_bars(dc, symbol, freq='D', limit=500):
     return bars
 
 
-def single(symbol, freq):
+def single(symbol, freq, limit=None):
 
     # bars = get_bars(dc, symbol,)
-    bars = get_bars(dc, symbol, freq)
+    bars = get_bars(dc, symbol, freq, limit)
     if not bars:
         return
     logger.info(f"获取{len(bars)}条k线完成@{now()}")

@@ -90,27 +90,11 @@ def single_doc():
     document.save(file_path)
 
 
-def get_range(rel_urls):
+def get_range(rel_urls, img_flag=False):
     f_start = rel_urls[0].split("/")[-1]
     f_end = rel_urls[-1].split("/")[-1]
     ext = datetime.now().strftime('%y%m%d%H%M%S')
     file_path = os.path.join(f'czsc108a4_{f_start}_{f_end}_{ext}.docx')
-
-    # 获取所有相关相对链接
-    # rel_urls = get_links(target_url)[7:9]
-    # rel_urls = get_links(target_url)[84:85]
-    # rel_urls = get_links(target_url)[60:61]
-
-    # rel_urls = get_links(target_url)[:109]
-
-    # rel_urls = get_links(target_url)[:20]
-    # rel_urls = get_links(target_url)[20:40]
-    # rel_urls = get_links(target_url)[40:60]
-    # rel_urls = get_links(target_url)[60:80]
-    # rel_urls = get_links(target_url)[80:100]
-    # rel_urls = get_links(target_url)[100:109]
-    # print(rel_urls)
-    # return
 
     document = Document()
     set_format(document)
@@ -150,8 +134,10 @@ def get_range(rel_urls):
                     document.add_paragraph(child.text)
                 elif child.name == 'img':
                     image_url = get_abs_url(child['src'])
-                    add_image(image_url, document)
-                    # document.add_paragraph(image_url)
+                    if not img_flag:
+                        document.add_paragraph(image_url)
+                    else:
+                        add_image(image_url, document)
 
                 elif child.name in ['h2', 'h3']:
                     # document.add_heading('回复', level=2)
