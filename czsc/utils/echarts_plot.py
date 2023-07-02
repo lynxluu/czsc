@@ -157,6 +157,11 @@ def kline_pro(kline: List[dict],
     k_data = [opts.CandleStickItem(name=i, value=[x['open'], x['close'], x['low'], x['high']])
               for i, x in enumerate(kline)]
 
+    # 计算图表一个单位y坐标相当于的像素数
+    highs = [x['high'] for x in kline]
+    scale = 2160 / max(highs)
+    # scale = 560 / max(highs) * 4
+
     vol = []
     for i, row in enumerate(kline):
         item_style = red_item_style if row['close'] > row['open'] else green_item_style
@@ -336,14 +341,23 @@ def kline_pro(kline: List[dict],
     if cdk:
         print("kline_pro：重叠区检测",len(cdk),cdk[-1])
         for x in cdk:
+            # 画空心矩形
             cdk_dts = [x['dt1'], x['dt2'], x['dt2'], x['dt1'], x['dt1']]
             cdk_val = [x['low'], x['low'], x['high'], x['high'], x['low']]
+            width = 2
+
+            # 画中线，用宽度显示
+            # mid = (x['high'] + x['low'])/2
+            # # scale = 28
+            # width = (x['high'] - x['low']) * scale
+            # cdk_dts = [x['dt1'], x['dt2']]
+            # cdk_val = [mid, mid]
 
             chart_cdk = Line()
             chart_cdk.add_xaxis(cdk_dts)
             chart_cdk.add_yaxis(series_name="CDK", y_axis=cdk_val, is_selected=True,
                                 label_opts=opts.LabelOpts(is_show=False),
-                                linestyle_opts=opts.LineStyleOpts(color="red",width=2, opacity=0.5))
+                                linestyle_opts=opts.LineStyleOpts(color="yellow", width=width, opacity=0.5))
             chart_cdk.set_global_opts(xaxis_opts=grid0_xaxis_opts, legend_opts=legend_not_show_opts)
             chart_k = chart_k.overlap(chart_cdk)
 

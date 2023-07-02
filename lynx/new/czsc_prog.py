@@ -8,9 +8,9 @@ def main():
     # # 处理单个代码
     # #  512880.SH
 
-    # single('000001.SH#I', 'D')
+    single('000001.SH#I', 'D', 130)
     # single('000001.SH#I', '30min')
-    single('002624.SZ', 'D', 100)
+    # single('002624.SZ', 'D', 130)
     # single_3l(symbol)
 
 if __name__ == '__main__':
