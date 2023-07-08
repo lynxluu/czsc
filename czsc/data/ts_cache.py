@@ -204,13 +204,13 @@ class TsDataCache:
         else:
             start_date_ = (pd.to_datetime(self.sdt) - timedelta(days=1000)).strftime('%Y%m%d')
 
-            print(f"***debug{self.sdt, self.edt, start_date_}")
+            # print(f"***debug{self.sdt, self.edt, start_date_}")
             # ***debug 有缓存时改写start_date_
             if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
                 okline = pd.read_feather(file_cache)
                 if len(okline) > 0:
                     start_date_ = okline.iloc[-1]['trade_date'].strftime('%Y%m%d')
-            print(f"***debug{self.sdt, self.edt, start_date_}")
+            # print(f"***debug{self.sdt, self.edt, start_date_}")
 
             kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
                                start_date=start_date_, end_date=self.edt)
@@ -275,7 +275,7 @@ class TsDataCache:
             dt1 = pd.to_datetime(self.sdt)
 
             # ***debug没有读取现有文件的最后日期，直接取了所有日期，这里要修改dt1
-            print(f"***debug分钟数据{self.sdt, self.edt, dt1, }")
+            # print(f"***debug分钟数据{self.sdt, self.edt, dt1, }")
             if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
                 okline = pd.read_feather(file_cache)
                 if len(okline) > 0:
@@ -283,7 +283,7 @@ class TsDataCache:
 
             delta = timedelta(days=20*int(freq.replace("min", "")))
             dt2 = dt1 + delta
-            print(f"***debug分钟数据{self.sdt, self.edt, dt1, dt2, delta}")
+            # print(f"***debug分钟数据{self.sdt, self.edt, dt1, dt2, delta}")
             # ***debug打印分段时间间隔
             # print(dt1,dt2,int(freq.replace("min", "")),delta)
 

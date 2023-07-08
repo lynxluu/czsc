@@ -16,8 +16,8 @@ def main():
     # single('002624.SZ', 'D', 130)
     # single_3l(symbol)
 
-    # rfresh_cache()
-    get_one()
+    rfresh_cache()
+    # get_one()
 def rfresh_cache():
     dc = TsDataCache(data_path=r"D:\ts_data", refresh=True)
     # symbols = get_symbols(dc, 'index')
