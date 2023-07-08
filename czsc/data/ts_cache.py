@@ -203,6 +203,12 @@ class TsDataCache:
                 print(f"pro_bar: read cache {file_cache}")
         else:
             start_date_ = (pd.to_datetime(self.sdt) - timedelta(days=1000)).strftime('%Y%m%d')
+            print(start_date_, self.sdt,self.edt)
+            # # 没有读取现有文件的最后日期，直接取了所有日期，这里要修改dt1
+            # if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
+            #     kline = pd.read_feather(file_cache)
+            #     start_date_ = kline.iloc[-1]['trade_date']
+            #     print(start_date_)
             kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
                                start_date=start_date_, end_date=self.edt)
             kline = kline.sort_values('trade_date', ignore_index=True)
@@ -252,6 +258,10 @@ class TsDataCache:
             klines = []
             end_dt = pd.to_datetime(self.edt)
             dt1 = pd.to_datetime(self.sdt)
+            # 没有读取现有文件的最后日期，直接取了所有日期，这里要修改dt1
+            if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
+                kline = pd.read_feather(file_cache)
+                dt1 = kline.iloc[-1]['trade_time']
             delta = timedelta(days=20*int(freq.replace("min", "")))
             dt2 = dt1 + delta
             # 打印分段时间间隔

@@ -70,6 +70,7 @@ def merge_bars(bars):
 
 
 def get_bars(dc, symbol, freq='D', limit=500):
+    logger.warning(f"get_bars参数-{symbol,freq, limit}")
     symbol_ = symbol.split('#')
     if len(symbol_) == 1:
         ts_code, asset = symbol_[0], 'E'
