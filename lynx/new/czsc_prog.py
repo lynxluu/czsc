@@ -40,8 +40,8 @@ def rfresh_cache():
 
 def get_one():
     symbol, freq, limit = '000001.SH#I', '15min', None
-    symbol = '001000.SZ#E'
-    freq = 'D'
+    symbol = '000999.SZ#E'
+    # freq = 'D'
 
     bars = get_bars(dc, symbol, freq, limit)
     # bars = get_bars(dc, '000001.SH#I', '15min', limit)

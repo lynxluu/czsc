@@ -203,12 +203,15 @@ class TsDataCache:
                 print(f"pro_bar: read cache {file_cache}")
         else:
             start_date_ = (pd.to_datetime(self.sdt) - timedelta(days=1000)).strftime('%Y%m%d')
-            print(start_date_, self.sdt,self.edt)
-            # # 没有读取现有文件的最后日期，直接取了所有日期，这里要修改dt1
-            # if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
-            #     kline = pd.read_feather(file_cache)
-            #     start_date_ = kline.iloc[-1]['trade_date']
-            #     print(start_date_)
+
+            print(f"***debug{self.sdt, self.edt, start_date_}")
+            # ***debug 有缓存时改写start_date_
+            if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
+                okline = pd.read_feather(file_cache)
+                if len(okline) > 0:
+                    start_date_ = okline.iloc[-1]['trade_date'].strftime('%Y%m%d')
+            print(f"***debug{self.sdt, self.edt, start_date_}")
+
             kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
                                start_date=start_date_, end_date=self.edt)
             kline = kline.sort_values('trade_date', ignore_index=True)
@@ -216,20 +219,32 @@ class TsDataCache:
             kline['dt'] = kline['trade_date']
             kline['avg_price'] = kline['amount'] / kline['vol']
             update_bars_return(kline)
-            kline.to_feather(file_cache)
+
+            # ***debug如果kline行数大于1，则和okline合并,回写文件
+            if os.path.exists(file_cache):
+                if len(kline) > 1:
+                    # print(f"***debug{type(okline), type(kline)}")
+                    okline = pd.concat([okline, kline], ignore_index=True)
+                    okline = okline.drop_duplicates('trade_date').sort_values('trade_date', ascending=True, ignore_index=True)
+                    okline.to_feather(file_cache)
+            else:   # ***debug如果没有文件，用取到的kline赋值,回写文件
+                okline = kline
+                okline.to_feather(file_cache)
+            # kline.to_feather(file_cache)
+            # ***debug
 
         if start_date:
-            kline = kline[kline['trade_date'] >= pd.to_datetime(start_date)]
+            okline = okline[okline['trade_date'] >= pd.to_datetime(start_date)]
         if end_date:
-            kline = kline[kline['trade_date'] <= pd.to_datetime(end_date)]
+            okline = okline[okline['trade_date'] <= pd.to_datetime(end_date)]
         # 如果限制返回长度，执行限制
         if limit:
-            kline = kline.tail(limit)
+            okline = okline.tail(limit)
 
-        kline.reset_index(drop=True, inplace=True)
+        okline.reset_index(drop=True, inplace=True)
         if raw_bar:
-            kline = format_kline(kline, freq=self.freq_map[freq])
-        return kline
+            okline = format_kline(okline, freq=self.freq_map[freq])
+        return okline
 
     # def pro_bar_minutes(self, ts_code, sdt=None, edt=None, freq='60min', asset="E", adj=None, raw_bar=True,):
     def pro_bar_minutes(self, ts_code, sdt=None, edt=None, freq='60min', asset="E", adj=None, raw_bar=True, limit=None):
@@ -251,21 +266,27 @@ class TsDataCache:
         edt = self.edt if not edt else edt
 
         if not self.refresh and os.path.exists(file_cache):
-            kline = pd.read_feather(file_cache)
+            okline = pd.read_feather(file_cache)
             if self.verbose:
                 print(f"pro_bar_minutes: read cache {file_cache}")
         else:
             klines = []
             end_dt = pd.to_datetime(self.edt)
             dt1 = pd.to_datetime(self.sdt)
-            # 没有读取现有文件的最后日期，直接取了所有日期，这里要修改dt1
+
+            # ***debug没有读取现有文件的最后日期，直接取了所有日期，这里要修改dt1
+            print(f"***debug分钟数据{self.sdt, self.edt, dt1, }")
             if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
-                kline = pd.read_feather(file_cache)
-                dt1 = kline.iloc[-1]['trade_time']
+                okline = pd.read_feather(file_cache)
+                if len(okline) > 0:
+                    dt1 = okline.iloc[-1]['trade_time']
+
             delta = timedelta(days=20*int(freq.replace("min", "")))
             dt2 = dt1 + delta
-            # 打印分段时间间隔
+            print(f"***debug分钟数据{self.sdt, self.edt, dt1, dt2, delta}")
+            # ***debug打印分段时间间隔
             # print(dt1,dt2,int(freq.replace("min", "")),delta)
+
             while dt1 < end_dt:
                 df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq,
                                 start_date=dt1.strftime(dt_fmt), end_date=dt2.strftime(dt_fmt))
@@ -328,19 +349,30 @@ class TsDataCache:
                 adj_map = {row['trade_date']: row['adj_factor'] for _, row in factor.iterrows()}
                 for col in ['open', 'close', 'high', 'low']:
                     kline[col] = kline.apply(lambda x: x[col] * adj_map[x['trade_date']], axis=1)
-
             update_bars_return(kline)
-            kline.to_feather(file_cache)
+
+            # ***debug如果kline行数大于1，则和okline合并,回写文件
+            if os.path.exists(file_cache):
+                if len(kline) > 1:
+                    print(f"***debug{type(okline), type(kline)}")
+                    okline = pd.concat([okline, kline], ignore_index=True)
+                    okline = okline.drop_duplicates('trade_time').sort_values('trade_time', ascending=True, ignore_index=True)
+                    okline.to_feather(file_cache)
+            else:  # ***debug如果没有文件，用取到的kline赋值,回写文件
+                okline = kline
+                okline.to_feather(file_cache)
+            # kline.to_feather(file_cache)
+            # ***debug
 
         if sdt:
-            kline = kline[kline['trade_time'] >= pd.to_datetime(sdt)]
+            kline = okline[okline['trade_time'] >= pd.to_datetime(sdt)]
         if edt:
-            kline = kline[kline['trade_time'] <= pd.to_datetime(edt)]
+            kline = okline[okline['trade_time'] <= pd.to_datetime(edt)]
         # 如果限制返回数量，执行限制
         if limit:
-            kline = kline.tail(limit)
+            kline = okline.tail(limit)
 
-        bars = kline.reset_index(drop=True)
+        bars = okline.reset_index(drop=True)
         if raw_bar:
             bars = format_kline(bars, freq=self.freq_map[freq])
         return bars
