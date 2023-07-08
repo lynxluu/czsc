@@ -67,6 +67,7 @@ class TsDataCache:
         self.refresh = refresh
         self.sdt = pd.to_datetime(sdt).strftime(self.date_fmt)
         self.edt = pd.to_datetime(edt).strftime(self.date_fmt)
+        self.last_date = pd.to_datetime(sdt)
         self.data_path = data_path
         self.prefix = "TS_CACHE"
         self.cache_path = os.path.join(self.data_path, self.prefix)
@@ -210,28 +211,38 @@ class TsDataCache:
                 okline = pd.read_feather(file_cache)
                 if len(okline) > 0:
                     start_date_ = okline.iloc[-1]['trade_date'].strftime('%Y%m%d')
+                    dt1 = pd.to_datetime(start_date_)
             # print(f"***debug{self.sdt, self.edt, start_date_}")
 
-            kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
-                               start_date=start_date_, end_date=self.edt)
-            kline = kline.sort_values('trade_date', ignore_index=True)
-            kline['trade_date'] = pd.to_datetime(kline['trade_date'], format=self.date_fmt)
-            kline['dt'] = kline['trade_date']
-            kline['avg_price'] = kline['amount'] / kline['vol']
-            update_bars_return(kline)
+            # ***debug 如果dt1!=最后交易时间self.last_date, 获取k线, 并设置self.last_date
+            if dt1 != self.last_date:
+                kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
+                                   start_date=start_date_, end_date=self.edt)
+                kline = kline.sort_values('trade_date', ignore_index=True)
+                kline['trade_date'] = pd.to_datetime(kline['trade_date'], format=self.date_fmt)
+                kline['dt'] = kline['trade_date']
+                kline['avg_price'] = kline['amount'] / kline['vol']
+                update_bars_return(kline)
 
-            # ***debug如果kline行数大于1，则和okline合并,回写文件
-            if os.path.exists(file_cache):
-                if len(kline) > 1:
-                    # print(f"***debug{type(okline), type(kline)}")
-                    okline = pd.concat([okline, kline], ignore_index=True)
-                    okline = okline.drop_duplicates('trade_date').sort_values('trade_date', ascending=True, ignore_index=True)
+                # ***debug 设置self.last_date
+                # print(f"***debug:{self.last_date}")
+                self.last_date = pd.to_datetime(kline.iloc[-1]['trade_date'])
+                # print(f"***debug:{self.last_date}")
+
+                # ***debug如果kline行数大于1，则和okline合并,回写文件
+                if os.path.exists(file_cache):
+                    if len(kline) > 1:
+                        # print(f"***debug{type(okline), type(kline)}")
+                        okline = pd.concat([okline, kline], ignore_index=True)
+                        okline = okline.drop_duplicates('trade_date').sort_values('trade_date', ascending=True, ignore_index=True)
+                        okline.to_feather(file_cache)
+                else:   # ***debug如果没有文件，用取到的kline赋值,回写文件
+                    okline = kline
                     okline.to_feather(file_cache)
-            else:   # ***debug如果没有文件，用取到的kline赋值,回写文件
-                okline = kline
-                okline.to_feather(file_cache)
-            # kline.to_feather(file_cache)
-            # ***debug
+                # kline.to_feather(file_cache)
+                # ***debug
+            else:
+                print(f"***debug最后日期未变:{dt1, self.last_date}, 不调ts接口")
 
         if start_date:
             okline = okline[okline['trade_date'] >= pd.to_datetime(start_date)]
@@ -281,96 +292,107 @@ class TsDataCache:
                 if len(okline) > 0:
                     dt1 = okline.iloc[-1]['trade_time']
 
-            delta = timedelta(days=20*int(freq.replace("min", "")))
-            dt2 = dt1 + delta
-            # print(f"***debug分钟数据{self.sdt, self.edt, dt1, dt2, delta}")
-            # ***debug打印分段时间间隔
-            # print(dt1,dt2,int(freq.replace("min", "")),delta)
-
-            while dt1 < end_dt:
-                df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq,
-                                start_date=dt1.strftime(dt_fmt), end_date=dt2.strftime(dt_fmt))
-                klines.append(df)
-                dt1 = dt2
+            # ***debug 如果dt1!=最后交易时间self.last_date, 获取k线, 并设置self.last_date
+            # print(f"***debug:{dt1, self.last_date}")
+            if dt1 != self.last_date:
+                delta = timedelta(days=20*int(freq.replace("min", "")))
                 dt2 = dt1 + delta
+                # print(f"***debug分钟数据{self.sdt, self.edt, dt1, dt2, delta}")
+                # ***debug打印分段时间间隔
+                # print(dt1,dt2,int(freq.replace("min", "")),delta)
+
+                while dt1 < end_dt:
+                    df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq,
+                                    start_date=dt1.strftime(dt_fmt), end_date=dt2.strftime(dt_fmt))
+                    klines.append(df)
+                    dt1 = dt2
+                    dt2 = dt1 + delta
+                    if self.verbose:
+                        print(f"pro_bar_minutes: {ts_code} - {asset} - {freq} - {dt1} - {dt2} - {len(df)}")
+
+                df_klines = pd.concat(klines, ignore_index=True)
+                kline = df_klines.drop_duplicates('trade_time')\
+                    .sort_values('trade_time', ascending=True, ignore_index=True)
+                kline['trade_time'] = pd.to_datetime(kline['trade_time'], format=dt_fmt)
+
+                # ***debug 设置self.last_date
+                # print(f"***debug:{dt1, self.last_date}")
+                self.last_date = pd.to_datetime(kline.iloc[-1]['trade_time'], format=dt_fmt)
+                # print(f"***debug:{dt1, self.last_date}")
+
+                kline['dt'] = kline['trade_time']
+                float_cols = ['open', 'close', 'high', 'low', 'vol', 'amount']
+                kline[float_cols] = kline[float_cols].astype('float32')
+                kline['avg_price'] = kline['amount'] / kline['vol']
+
+                # 删除9:30的K线
+                kline['keep'] = kline['trade_time'].apply(lambda x: 0 if x.hour == 9 and x.minute == 30 else 1)
+                kline = kline[kline['keep'] == 1]
+                # 删除没有成交量的K线
+                kline = kline[kline['vol'] > 0]
+                kline.drop(['keep'], axis=1, inplace=True)
+
+                start_date = pd.to_datetime(self.sdt)
+                end_date = pd.to_datetime(self.edt)
+                kline = kline[(kline['trade_time'] >= start_date) & (kline['trade_time'] <= end_date)]
+                kline = kline.reset_index(drop=True)
+                kline['trade_date'] = kline.trade_time.apply(lambda x: x.strftime(date_fmt))
+
+                if asset == 'E':
+                    # https://tushare.pro/document/2?doc_id=28
+                    factor = pro.adj_factor(ts_code=ts_code, start_date=self.sdt, end_date=self.edt)
+                elif asset == 'FD':
+                    # https://tushare.pro/document/2?doc_id=199
+                    factor = pro.fund_adj(ts_code=ts_code, start_date=self.sdt, end_date=self.edt)
+                else:
+                    factor = pd.DataFrame()
+
+                if len(factor) > 0:
+                    # 处理复权因子缺失的情况：前值填充
+                    df1 = pd.DataFrame({'trade_date': kline['trade_date'].unique().tolist()})
+                    factor = df1.merge(factor, on=['trade_date'], how='left').fillna(method='ffill')
+                    factor = factor.sort_values('trade_date', ignore_index=True)
+
                 if self.verbose:
-                    print(f"pro_bar_minutes: {ts_code} - {asset} - {freq} - {dt1} - {dt2} - {len(df)}")
+                    print(f"pro_bar_minutes: {ts_code} - {asset} - 复权因子长度 = {len(factor)}")
 
-            df_klines = pd.concat(klines, ignore_index=True)
-            kline = df_klines.drop_duplicates('trade_time')\
-                .sort_values('trade_time', ascending=True, ignore_index=True)
-            kline['trade_time'] = pd.to_datetime(kline['trade_time'], format=dt_fmt)
-            kline['dt'] = kline['trade_time']
-            float_cols = ['open', 'close', 'high', 'low', 'vol', 'amount']
-            kline[float_cols] = kline[float_cols].astype('float32')
-            kline['avg_price'] = kline['amount'] / kline['vol']
+                # 复权行情说明：https://tushare.pro/document/2?doc_id=146
+                if len(factor) > 0 and adj and adj == 'qfq':
+                    # 前复权	= 当日收盘价 × 当日复权因子 / 最新复权因子
+                    latest_factor = factor.iloc[-1]['adj_factor']
+                    adj_map = {row['trade_date']: row['adj_factor'] for _, row in factor.iterrows()}
+                    for col in ['open', 'close', 'high', 'low']:
+                        kline[col] = kline.apply(lambda x: x[col] * adj_map[x['trade_date']] / latest_factor, axis=1)
 
-            # 删除9:30的K线
-            kline['keep'] = kline['trade_time'].apply(lambda x: 0 if x.hour == 9 and x.minute == 30 else 1)
-            kline = kline[kline['keep'] == 1]
-            # 删除没有成交量的K线
-            kline = kline[kline['vol'] > 0]
-            kline.drop(['keep'], axis=1, inplace=True)
+                if len(factor) > 0 and adj and adj == 'hfq':
+                    # 后复权	= 当日收盘价 × 当日复权因子
+                    adj_map = {row['trade_date']: row['adj_factor'] for _, row in factor.iterrows()}
+                    for col in ['open', 'close', 'high', 'low']:
+                        kline[col] = kline.apply(lambda x: x[col] * adj_map[x['trade_date']], axis=1)
+                update_bars_return(kline)
 
-            start_date = pd.to_datetime(self.sdt)
-            end_date = pd.to_datetime(self.edt)
-            kline = kline[(kline['trade_time'] >= start_date) & (kline['trade_time'] <= end_date)]
-            kline = kline.reset_index(drop=True)
-            kline['trade_date'] = kline.trade_time.apply(lambda x: x.strftime(date_fmt))
-
-            if asset == 'E':
-                # https://tushare.pro/document/2?doc_id=28
-                factor = pro.adj_factor(ts_code=ts_code, start_date=self.sdt, end_date=self.edt)
-            elif asset == 'FD':
-                # https://tushare.pro/document/2?doc_id=199
-                factor = pro.fund_adj(ts_code=ts_code, start_date=self.sdt, end_date=self.edt)
-            else:
-                factor = pd.DataFrame()
-
-            if len(factor) > 0:
-                # 处理复权因子缺失的情况：前值填充
-                df1 = pd.DataFrame({'trade_date': kline['trade_date'].unique().tolist()})
-                factor = df1.merge(factor, on=['trade_date'], how='left').fillna(method='ffill')
-                factor = factor.sort_values('trade_date', ignore_index=True)
-
-            if self.verbose:
-                print(f"pro_bar_minutes: {ts_code} - {asset} - 复权因子长度 = {len(factor)}")
-
-            # 复权行情说明：https://tushare.pro/document/2?doc_id=146
-            if len(factor) > 0 and adj and adj == 'qfq':
-                # 前复权	= 当日收盘价 × 当日复权因子 / 最新复权因子
-                latest_factor = factor.iloc[-1]['adj_factor']
-                adj_map = {row['trade_date']: row['adj_factor'] for _, row in factor.iterrows()}
-                for col in ['open', 'close', 'high', 'low']:
-                    kline[col] = kline.apply(lambda x: x[col] * adj_map[x['trade_date']] / latest_factor, axis=1)
-
-            if len(factor) > 0 and adj and adj == 'hfq':
-                # 后复权	= 当日收盘价 × 当日复权因子
-                adj_map = {row['trade_date']: row['adj_factor'] for _, row in factor.iterrows()}
-                for col in ['open', 'close', 'high', 'low']:
-                    kline[col] = kline.apply(lambda x: x[col] * adj_map[x['trade_date']], axis=1)
-            update_bars_return(kline)
-
-            # ***debug如果kline行数大于1，则和okline合并,回写文件
-            if os.path.exists(file_cache):
-                if len(kline) > 1:
-                    print(f"***debug{type(okline), type(kline)}")
-                    okline = pd.concat([okline, kline], ignore_index=True)
-                    okline = okline.drop_duplicates('trade_time').sort_values('trade_time', ascending=True, ignore_index=True)
+                # ***debug如果kline行数大于1，则和okline合并,回写文件
+                if os.path.exists(file_cache):
+                    if len(kline) > 1:
+                        print(f"***debug{type(okline), type(kline)}")
+                        okline = pd.concat([okline, kline], ignore_index=True)
+                        okline = okline.drop_duplicates('trade_time').sort_values('trade_time', ascending=True, ignore_index=True)
+                        okline.to_feather(file_cache)
+                else:  # ***debug如果没有文件，用取到的kline赋值,回写文件
+                    okline = kline
                     okline.to_feather(file_cache)
-            else:  # ***debug如果没有文件，用取到的kline赋值,回写文件
-                okline = kline
-                okline.to_feather(file_cache)
-            # kline.to_feather(file_cache)
-            # ***debug
+                # kline.to_feather(file_cache)
+                # ***debug
+            else:
+                print(f"***debug最后日期未变:{dt1, self.last_date},不调ts接口")
 
         if sdt:
-            kline = okline[okline['trade_time'] >= pd.to_datetime(sdt)]
+            okline = okline[okline['trade_time'] >= pd.to_datetime(sdt)]
         if edt:
-            kline = okline[okline['trade_time'] <= pd.to_datetime(edt)]
+            okline = okline[okline['trade_time'] <= pd.to_datetime(edt)]
         # 如果限制返回数量，执行限制
         if limit:
-            kline = okline.tail(limit)
+            okline = okline.tail(limit)
 
         bars = okline.reset_index(drop=True)
         if raw_bar:
