@@ -206,22 +206,23 @@ class TsDataCache:
             start_date_ = (pd.to_datetime(self.sdt) - timedelta(days=1000)).strftime('%Y%m%d')
             # 他的start_date_往前取1000, 是为了计算均线?
 
-            last_date = start_date_
-            # print(f"***debug日线数据1-{ts_code, self.sdt, self.edt, last_date, self.last_date}")
+            dt1_date = start_date_
+            last_date = self.last_date
+            # print(f"***debug日线数据1-{ts_code, self.sdt, self.edt, dt1_date, last_date}")
             # ***debug 有缓存时改写start_date_;
             if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
                 okline = pd.read_feather(file_cache)
                 if len(okline) > 0:
-                    last_date = okline.iloc[-1]['trade_date'].strftime('%Y%m%d')
-            dt1 = pd.to_datetime(last_date)
-            # print(f"***debug日线数据2-{ts_code, self.sdt, self.edt, last_date, self.last_date}")
+                    dt1_date = okline.iloc[-1]['trade_date'].strftime('%Y%m%d')
+            dt1 = pd.to_datetime(dt1_date)
+            # print(f"***debug日线数据2-{ts_code, self.sdt, self.edt, dt1, last_date}")
 
             # ***debug 如果dt1!=最后交易时间self.last_date, 获取k线, 并设置self.last_date
-            if dt1 != self.last_date:
+            if dt1 != last_date:
                 # kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
                 #                    start_date=start_date_, end_date=self.edt)
                 kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
-                                   start_date=last_date, end_date=self.edt)
+                                   start_date=dt1_date, end_date=self.edt)
                 # ***debug 从文件最后行的日期开始取数据
                 kline = kline.sort_values('trade_date', ignore_index=True)
                 kline['trade_date'] = pd.to_datetime(kline['trade_date'], format=self.date_fmt)
@@ -247,7 +248,7 @@ class TsDataCache:
                 # kline.to_feather(file_cache)
                 # ***debug
             else:
-                print(f"***debug最后日期未变:{dt1, self.last_date}, 不调ts接口")
+                print(f"***debug最后日期未变-{ts_code, dt1, last_date}, 不调ts接口")
 
         if start_date:
             okline = okline[okline['trade_date'] >= pd.to_datetime(start_date)]
@@ -387,7 +388,7 @@ class TsDataCache:
                 # kline.to_feather(file_cache)
                 # ***debug
             else:
-                print(f"***debug最后日期未变:{dt1, self.last_date},不调ts接口")
+                print(f"***debug最后日期未变-{ts_code, dt1, last_date},不调ts接口")
 
         if sdt:
             okline = okline[okline['trade_time'] >= pd.to_datetime(sdt)]
