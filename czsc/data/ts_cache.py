@@ -388,7 +388,7 @@ class TsDataCache:
                 # kline.to_feather(file_cache)
                 # ***debug
             else:
-                print(f"***debug最后日期未变-{ts_code, dt1, last_date},不调ts接口")
+                print(f"***debug分钟数据,最后日期未变-{ts_code, dt1, last_date},不调ts接口")
 
         if sdt:
             okline = okline[okline['trade_time'] >= pd.to_datetime(sdt)]

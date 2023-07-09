@@ -77,6 +77,12 @@ def get_bars(dc, symbol, freq='D', adj='qfq', limit=500):
     elif len(symbol_) == 2:
         ts_code, asset = symbol_
 
+    bars = []
+    # 校验adj, 避免错误输入
+    if adj not in ('qfq', 'hfq', None):
+        logger.error(f"adj输入错误:{adj}")
+        return bars
+
     # now = now()
     edt = now().strftime(dt_fmt)
     sdt = '20200101'
@@ -90,6 +96,10 @@ def get_bars(dc, symbol, freq='D', adj='qfq', limit=500):
         bars = dc.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
                           start_date=sdt, end_date=edt, raw_bar=True, limit=limit)
 
+    if len(bars) > 0:
+        logger.warning(f"获得{len(bars)}根k线")
+    else:
+        logger.error(f"出错了,没有获得k线")
     return bars
 
 

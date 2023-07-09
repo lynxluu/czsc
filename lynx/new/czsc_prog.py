@@ -23,14 +23,14 @@ def rfresh_cache():
     prefix = r'D:\ts_data\TS_CACHE\pro_bar_minutes'
 
     # symbols = get_symbols(dc, 'check')
-    # symbols = get_symbols(dc, 'index')
+    symbols = get_symbols(dc, 'index')
     # symbols = get_symbols(dc, 'etfs')
 
     # symbols = get_symbols(dc, 'stock')
     # symbols = get_symbols(dc, 'stock')[::-1]
 
     # symbols = get_symbols(dc, 'train')
-    symbols = get_symbols(dc, 'valid')
+    # symbols = get_symbols(dc, 'valid')
 
     freqs = ['15min', 'D']
     # freqs = ['D']
@@ -72,7 +72,9 @@ def rfresh_cache():
 
 def get_one():
     dc = TsDataCache(data_path=r"D:\ts_data", refresh=True, last_date='20230707')   #日线的last_date和分时线不一样,差15小时
-    symbol, freq, adj, limit = '000001.SH#I', '15min', 'hqf', None
+    # *** debug
+    print(dc.last_date)
+    symbol, freq, adj, limit = '000001.SH#I', '15min', 'hfq', None
 
     # adj = 'hfq' # 所有的回测数据都用的后复权
 
@@ -80,9 +82,9 @@ def get_one():
     # freq = 'D'
 
     bars = get_bars(dc, symbol, freq, adj, limit)
-    # get_bars(dc, '000999.SZ#E', freq, adj, limit)
-    # get_bars(dc, '000998.SZ#E', freq, adj, limit)
-    # get_bars(dc, '000997.SZ#E', freq, adj, limit)
+    get_bars(dc, '000999.SZ#E', freq, adj, limit)
+    get_bars(dc, '000998.SZ#E', freq, adj, limit)
+    get_bars(dc, '000997.SZ#E', freq, adj, limit)
     # bars = get_bars(dc, '000001.SH#I', '15min', limit)
     # bars = get_bars(dc, '000001.SH#I', 'D', limit)
     # print(bars[:2])
