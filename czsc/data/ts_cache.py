@@ -54,7 +54,7 @@ def update_bars_return(kline: pd.DataFrame, bar_numbers=None):
 
 class TsDataCache:
     """Tushare 数据缓存"""
-    def __init__(self, data_path, refresh=False, sdt="20120101", edt=datetime.now()):
+    def __init__(self, data_path, refresh=False, sdt="20120101", edt=datetime.now(), last_date='20120101'):
         """
 
         :param data_path: 数据路径
@@ -67,7 +67,7 @@ class TsDataCache:
         self.refresh = refresh
         self.sdt = pd.to_datetime(sdt).strftime(self.date_fmt)
         self.edt = pd.to_datetime(edt).strftime(self.date_fmt)
-        self.last_date = pd.to_datetime(sdt)
+        self.last_date = pd.to_datetime(last_date)
         self.data_path = data_path
         self.prefix = "TS_CACHE"
         self.cache_path = os.path.join(self.data_path, self.prefix)
@@ -204,20 +204,25 @@ class TsDataCache:
                 print(f"pro_bar: read cache {file_cache}")
         else:
             start_date_ = (pd.to_datetime(self.sdt) - timedelta(days=1000)).strftime('%Y%m%d')
+            # 他的start_date_往前取1000, 是为了计算均线?
 
-            # print(f"***debug{self.sdt, self.edt, start_date_}")
-            # ***debug 有缓存时改写start_date_
+            last_date = start_date_
+            # print(f"***debug日线数据1-{ts_code, self.sdt, self.edt, last_date, self.last_date}")
+            # ***debug 有缓存时改写start_date_;
             if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
                 okline = pd.read_feather(file_cache)
                 if len(okline) > 0:
-                    start_date_ = okline.iloc[-1]['trade_date'].strftime('%Y%m%d')
-                    dt1 = pd.to_datetime(start_date_)
-            # print(f"***debug{self.sdt, self.edt, start_date_}")
+                    last_date = okline.iloc[-1]['trade_date'].strftime('%Y%m%d')
+            dt1 = pd.to_datetime(last_date)
+            # print(f"***debug日线数据2-{ts_code, self.sdt, self.edt, last_date, self.last_date}")
 
             # ***debug 如果dt1!=最后交易时间self.last_date, 获取k线, 并设置self.last_date
             if dt1 != self.last_date:
+                # kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
+                #                    start_date=start_date_, end_date=self.edt)
                 kline = ts.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
-                                   start_date=start_date_, end_date=self.edt)
+                                   start_date=last_date, end_date=self.edt)
+                # ***debug 从文件最后行的日期开始取数据
                 kline = kline.sort_values('trade_date', ignore_index=True)
                 kline['trade_date'] = pd.to_datetime(kline['trade_date'], format=self.date_fmt)
                 kline['dt'] = kline['trade_date']
@@ -225,9 +230,9 @@ class TsDataCache:
                 update_bars_return(kline)
 
                 # ***debug 设置self.last_date
-                # print(f"***debug:{self.last_date}")
-                self.last_date = pd.to_datetime(kline.iloc[-1]['trade_date'])
-                # print(f"***debug:{self.last_date}")
+                # print(f"***debug:{dt1, self.last_date}")
+                # self.last_date = pd.to_datetime(kline.iloc[-1]['trade_date'])
+                # print(f"***debug:{dt1, self.last_date}")
 
                 # ***debug如果kline行数大于1，则和okline合并,回写文件
                 if os.path.exists(file_cache):
@@ -286,20 +291,18 @@ class TsDataCache:
             dt1 = pd.to_datetime(self.sdt)
 
             # ***debug没有读取现有文件的最后日期，直接取了所有日期，这里要修改dt1
-            # print(f"***debug分钟数据{self.sdt, self.edt, dt1, }")
+            last_date = self.last_date + pd.Timedelta(hours=15)
+            # print(f"***debug分钟数据1-{ts_code, self.sdt, self.edt, dt1, last_date}")
             if os.path.exists(file_cache):  #有 缓存 取缓存文件最后的时间
                 okline = pd.read_feather(file_cache)
                 if len(okline) > 0:
                     dt1 = okline.iloc[-1]['trade_time']
+            # print(f"***debug分钟数据2-{ts_code, self.sdt, self.edt, dt1, last_date}")
 
-            # ***debug 如果dt1!=最后交易时间self.last_date, 获取k线, 并设置self.last_date
-            # print(f"***debug:{dt1, self.last_date}")
-            if dt1 != self.last_date:
+            # ***debug 如果dt1!=最后交易时间last_date, 获取k线
+            if dt1 != last_date:
                 delta = timedelta(days=20*int(freq.replace("min", "")))
                 dt2 = dt1 + delta
-                # print(f"***debug分钟数据{self.sdt, self.edt, dt1, dt2, delta}")
-                # ***debug打印分段时间间隔
-                # print(dt1,dt2,int(freq.replace("min", "")),delta)
 
                 while dt1 < end_dt:
                     df = ts.pro_bar(ts_code=ts_code, asset=asset, freq=freq,
@@ -317,7 +320,7 @@ class TsDataCache:
 
                 # ***debug 设置self.last_date
                 # print(f"***debug:{dt1, self.last_date}")
-                self.last_date = pd.to_datetime(kline.iloc[-1]['trade_time'], format=dt_fmt)
+                # self.last_date = pd.to_datetime(kline.iloc[-1]['trade_time'], format=dt_fmt)
                 # print(f"***debug:{dt1, self.last_date}")
 
                 kline['dt'] = kline['trade_time']
@@ -374,7 +377,7 @@ class TsDataCache:
                 # ***debug如果kline行数大于1，则和okline合并,回写文件
                 if os.path.exists(file_cache):
                     if len(kline) > 1:
-                        print(f"***debug{type(okline), type(kline)}")
+                        # print(f"***debug{type(okline), type(kline)}")
                         okline = pd.concat([okline, kline], ignore_index=True)
                         okline = okline.drop_duplicates('trade_time').sort_values('trade_time', ascending=True, ignore_index=True)
                         okline.to_feather(file_cache)

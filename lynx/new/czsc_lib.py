@@ -69,8 +69,8 @@ def merge_bars(bars):
     return n_bars
 
 
-def get_bars(dc, symbol, freq='D', limit=500):
-    logger.warning(f"get_bars参数-{symbol,freq, limit}")
+def get_bars(dc, symbol, freq='D', adj='qfq', limit=500):
+    logger.warning(f"get_bars参数-{symbol,freq, adj, limit}")
     symbol_ = symbol.split('#')
     if len(symbol_) == 1:
         ts_code, asset = symbol_[0], 'E'
@@ -82,11 +82,12 @@ def get_bars(dc, symbol, freq='D', limit=500):
     sdt = '20200101'
 
     if 'min' in freq:
-        bars = dc.pro_bar_minutes(ts_code=ts_code, asset=asset, adj='qfq', freq=freq,
+        # dc.last_date += pd.Timedelta(hours=15)  # 不能在这里改,否则 每调用一次就被改一次
+        bars = dc.pro_bar_minutes(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
                                   sdt=sdt, edt=edt, raw_bar=True, limit=limit)
 
     else:
-        bars = dc.pro_bar(ts_code=ts_code, asset=asset, adj='qfq', freq=freq,
+        bars = dc.pro_bar(ts_code=ts_code, asset=asset, adj=adj, freq=freq,
                           start_date=sdt, end_date=edt, raw_bar=True, limit=limit)
 
     return bars
