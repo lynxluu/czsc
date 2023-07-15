@@ -1,11 +1,21 @@
+# 引用已安装包
+import os
+import sys
 import streamlit as st
 from datetime import datetime
 import streamlit_echarts as st_echarts
 
+# 定位到项目根目录， 引用自己的代码
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, "..", ".."))
+sys.path.append(parent_dir)
+
 from analyze import CZSC
-from czsc.traders.base import CzscSignals, BarGenerator
+# from czsc.analyze import CZSC
+from czsc.traders.base import CzscSignals
 from czsc.data import TsDataCache, get_symbols
 from czsc.utils import BarGenerator
+
 
 
 def displayD(symbol, bars):

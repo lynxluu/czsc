@@ -303,8 +303,11 @@ def kline_pro(kline: List[dict],
     for i, (name, ma) in enumerate(ma_keys.items()):
         # is_selected = True if i < 4 else False
         is_selected = False
+        # chart_ma.add_yaxis(series_name=name, y_axis=ma, is_smooth=True,
+        #                    is_selected=is_selected, symbol_size=0, label_opts=label_not_show_opts,
+        #                    linestyle_opts=opts.LineStyleOpts(opacity=0.8, width=1))
         chart_ma.add_yaxis(series_name=name, y_axis=ma, is_smooth=True,
-                           is_selected=is_selected, symbol_size=0, label_opts=label_not_show_opts,
+                           symbol_size=0, label_opts=label_not_show_opts,
                            linestyle_opts=opts.LineStyleOpts(opacity=0.8, width=1))
 
     chart_ma.set_global_opts(xaxis_opts=grid0_xaxis_opts, legend_opts=legend_not_show_opts)
